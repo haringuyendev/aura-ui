@@ -1,4 +1,4 @@
-# Aura UI (v0.8)
+# Aura UI (v0.8.1)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
