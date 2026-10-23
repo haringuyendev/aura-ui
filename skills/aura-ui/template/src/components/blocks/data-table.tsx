@@ -19,7 +19,7 @@ import {
   type Updater,
   type VisibilityState,
 } from "@tanstack/react-table"
-import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, SearchIcon, XIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, ChevronLeftIcon, ChevronRightIcon, SearchIcon, XIcon } from "lucide-react"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { formatNumber } from "@/lib/format"
 import { ColumnsMenu } from "./data-table-parts/columns-menu"
-import { downloadCsv } from "./data-table-parts/csv"
+import { ExportMenu } from "./data-table-parts/export-menu"
 import { FacetFilter, type FacetOption } from "./data-table-parts/facet-filter"
 
 declare module "@tanstack/react-table" {
@@ -45,8 +45,10 @@ declare module "@tanstack/react-table" {
     label?: string
     /** false keeps the column out of the columns menu (use for the identity column). */
     hideable?: boolean
-    /** CSV cell value; defaults to the accessor value. */
-    exportValue?: (row: TData) => string | number | null | undefined
+    /** Export value (Excel/CSV); defaults to the accessor value. Return numbers and Dates, not formatted text, for Excel. */
+    exportValue?: (row: TData) => string | number | boolean | Date | null | undefined
+    /** Excel number format, e.g. '#,##0 "₫"', '0.0%', 'dd/mm/yyyy hh:mm'. Defaults by value type. */
+    excelFormat?: string
   }
 }
 
@@ -85,7 +87,7 @@ type DataTableProps<TData> = {
   selectable?: boolean
   /** Buttons shown in the bulk bar for the selected rows; call clear() after acting. */
   bulkActions?: (rows: TData[], clear: () => void) => React.ReactNode
-  /** Adds an "Xuất CSV" button (exports the selected rows, or all filtered rows). */
+  /** Adds an "Xuất" menu: Excel (.xlsx) or CSV, of the selected rows or all filtered rows. */
   exportFileName?: string
   onRowClick?: (row: TData) => void
   /** Extra controls next to the search and filters (tabs, a primary action). */
@@ -280,11 +282,9 @@ function DataTable<TData>({
         }
       : {}
 
-  const exportRows = () => {
-    if (!exportFileName) return
-    const cols = visibleColumns.filter((c) => c.id !== "__select")
-    downloadCsv(exportFileName, cols, selectedRows.length ? selectedRows : manual ? rows : table.getSortedRowModel().rows.filter((r) => table.getFilteredRowModel().rowsById[r.id]))
-  }
+  const exportColumns = visibleColumns.filter((c) => c.id !== "__select")
+  const exportRows = () =>
+    selectedRows.length ? selectedRows : manual ? rows : table.getSortedRowModel().rows.filter((r) => table.getFilteredRowModel().rowsById[r.id])
 
   const search = searchPlaceholder && (
     <InputGroup className="w-full sm:w-72">
@@ -318,11 +318,7 @@ function DataTable<TData>({
               <span className="text-sm font-medium tabular-nums">Đã chọn {formatNumber(selectedRows.length)}</span>
               <div className="flex flex-wrap items-center gap-2">
                 {bulkActions?.(selectedRows.map((r) => r.original), clearSelection)}
-                {exportFileName && (
-                  <Button variant="outline" size="sm" onClick={exportRows}>
-                    <DownloadIcon /> Xuất CSV
-                  </Button>
-                )}
+                {exportFileName && <ExportMenu fileName={exportFileName} columns={exportColumns} getRows={exportRows} />}
               </div>
               <Button variant="ghost" size="sm" className="ml-auto" onClick={clearSelection}>
                 <XIcon /> Bỏ chọn
@@ -344,11 +340,7 @@ function DataTable<TData>({
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {toolbar}
-                {exportFileName && (
-                  <Button variant="outline" size="sm" onClick={exportRows} disabled={total === 0}>
-                    <DownloadIcon /> Xuất CSV
-                  </Button>
-                )}
+                {exportFileName && <ExportMenu fileName={exportFileName} columns={exportColumns} getRows={exportRows} disabled={total === 0} />}
                 {columnToggle && <ColumnsMenu table={table} />}
               </div>
             </>

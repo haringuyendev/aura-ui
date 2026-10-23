@@ -511,7 +511,7 @@
     "name": "data-table",
     "category": "data",
     "kind": "block",
-    "summary": "Full table on TanStack Table: sortable headers, search, multi-select column filters with counts, user column show/hide (remembered), row selection with a bulk-action bar, CSV export, pagination with page size, loading skeleton, mobile cards, and a server mode for API data.",
+    "summary": "Full table on TanStack Table: sortable headers, search, multi-select column filters with counts, user column show/hide (remembered), row selection with a bulk-action bar, Excel (.xlsx, formatted) and CSV export, pagination with page size, loading skeleton, mobile cards, and a server mode for API data.",
     "use_when": [
       "lists of records users search, filter, sort, select and open (orders, patients, staff, tickets)",
       "API-backed lists with server-side paging/sorting/filtering (manual mode)"
@@ -526,6 +526,7 @@
       "data table",
       "datatable",
       "export csv",
+      "export excel",
       "faceted filter",
       "grid",
       "hide columns",
@@ -542,11 +543,13 @@
       "tanstack",
       "thao tác hàng loạt",
       "tìm kiếm",
+      "tải excel",
+      "xlsx",
       "xuất csv",
       "xuất excel",
       "ẩn cột"
     ],
-    "example": "<DataTable columns={columns} data={orders} getRowId={(o) => o.id} searchPlaceholder=\"Tìm mã đơn, khách\" filters={[{ column: \"status\", title: \"Trạng thái\", options: [{ value: \"late\", label: \"Giao trễ\" }] }]} columnToggle storageKey=\"orders\" selectable bulkActions={(rows, clear) => <Button size=\"sm\" onClick={() => { approve(rows); clear() }}>Duyệt</Button>} exportFileName=\"don-hang\" onRowClick={openOrder} renderMobileRow={(o) => <OrderRow order={o} />} />  // server: manual rowCount={total} loading={isFetching} state={{ sorting, pagination, columnFilters, globalFilter }} + on…Change handlers. Column meta: { align, className, label, hideable: false, exportValue }",
+    "example": "<DataTable columns={columns} data={orders} getRowId={(o) => o.id} searchPlaceholder=\"Tìm mã đơn, khách\" filters={[{ column: \"status\", title: \"Trạng thái\", options: [{ value: \"late\", label: \"Giao trễ\" }] }]} columnToggle storageKey=\"orders\" selectable bulkActions={(rows, clear) => <Button size=\"sm\" onClick={() => { approve(rows); clear() }}>Duyệt</Button>} exportFileName=\"don-hang\" onRowClick={openOrder} renderMobileRow={(o) => <OrderRow order={o} />} />  // server: manual rowCount={total} loading={isFetching} state={{ sorting, pagination, columnFilters, globalFilter }} + on…Change handlers. Column meta: { align, className, label, hideable: false, exportValue (return numbers/Dates for Excel), excelFormat: '#,##0 \"₫\"' }",
     "related": [
       "table",
       "pagination",
