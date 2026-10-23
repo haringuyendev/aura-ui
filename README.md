@@ -1,4 +1,4 @@
-# Aura UI (v0.7)
+# Aura UI (v0.8)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -25,7 +25,8 @@ skills/aura-ui/
   references/dashboard.md    bố cục dải, KPI, khung "Cần xử lý", biểu đồ, danh sách
   template/                  starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component,
                              Base UI) + react-router + TanStack Query/Table + react-hook-form + zod;
-                             src/components/blocks/ (page-header, stat, data-table, description-list,
+                             src/components/blocks/ (page-header, stat, data-table [sort, lọc theo cột, ẩn/hiện cột,
+                             chọn nhiều dòng, xuất CSV, chế độ server], description-list,
                              form, number-input, date-range-picker, file-upload, stepper), src/lib/format.ts
   catalog/components.json    danh mục 76 mục (63 linh kiện shadcn, 9 khối, 3 add-on, format): tác dụng,
                              khi dùng/không dùng, export, variant, ví dụ
