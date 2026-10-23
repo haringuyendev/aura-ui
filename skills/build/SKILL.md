@@ -1,77 +1,24 @@
 ---
-name: aura-ui
-description: Build web apps, screens and dashboards that don't look AI-generated, the way Lovable does it - a fixed React + Vite + Tailwind + shadcn/ui starter, a design system defined first in index.css, semantic tokens only, screens composed only from the starter's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a 390/768/1440 self-check. Use when the user asks to create or redesign an app, page, screen, dashboard or prototype, or when generated UI looks generic, cluttered or inconsistent.
+name: build
+description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a 390/768/1440 self-check. Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
 ---
 
-# Aura UI: design system first, on a fixed stack
+# Aura build: design system first, compose from the project's components
 
-This skill reproduces the approach that makes Lovable's output look consistent:
-**one fixed stack, a full component library already installed, and a design system written before
-any screen.** The model composes styled components instead of inventing CSS, so every screen shares
-the same colors, radius, spacing and type.
+**`AURA`** below is the aura-ui plugin folder: two levels above this skill's real directory (outside Claude Code, the folder where the aura-ui repo is cloned)
+(`<base>/../..`), containing `manager/`, `template/`, `catalog/`, `addons/`, `scripts/`, `references/`.
 
-## Stack (fixed)
-React + Vite + TypeScript + Tailwind v4 + shadcn/ui (Base UI primitives) + lucide icons +
-react-router + TanStack Query. Do not switch frameworks or add another UI library.
-
-**New project:** copy the starter (it also runs `aura init`), then work inside it. The script lives in this skill's folder
-(the folder containing this SKILL.md); in Claude Code that is `${CLAUDE_PLUGIN_ROOT}/skills/aura-ui`.
-```bash
-bash <this-skill-folder>/scripts/new-app.sh <target-dir>
-```
-The starter has all 60+ shadcn components in `src/components/ui/`, ready-made blocks in
-`src/components/blocks/` (page-header, stat + delta, data-table, description-list, form with zod,
-number-input, date-range-picker, file-upload, stepper), vi-VN formatters in `src/lib/format.ts`,
-tokens in `src/index.css`
-(including a 5-color `chart-1…5` palette and `success` / `warning` / `info` / `destructive` status
-colors, all AA on the background; retune their hues to the brand but keep them colorful),
-routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
-
-**Existing project:** don't use the starter. Follow "Working in an existing project" below first.
-
-## Finding the right component
-In any app with `.aura/` (all apps made from the starter), use `aura find` (next section): it searches the
-app's real components, pre-described from the catalog. `catalog/components.json` is the reference of what
-the starter and its add-ons offer; it describes every starter component (`kind`: primitive, block or util): what
-it is for, when to use and avoid it, exports, variants and a one-line example. Query it instead of reading component files:
-```bash
-node <this-skill-folder>/scripts/catalog.mjs find chọn khoảng ngày   # best matches (vi/en, accents optional)
-node <this-skill-folder>/scripts/catalog.mjs show calendar popover   # full entries: exports, variants, example
-node <this-skill-folder>/scripts/catalog.mjs list form               # all components in a category
-```
-**Add-ons** (`kind: addon`) are heavy blocks kept out of the starter: `rich-text-editor` /
-`rich-text-content` (Tiptap) and `file-lightbox` (PDF, Word, Excel, images). The catalog shows their
-install command; run it once per app before importing them:
-```bash
-node <this-skill-folder>/scripts/add-block.mjs file-lightbox <app-dir>   # copies files, npm install, assets
-node <this-skill-folder>/scripts/add-block.mjs list
-```
-
-Categories: layout, navigation, data, form, action, overlay, feedback, chat, util. Before building any
-part of a screen, `find` the component for it, and prefer a block over re-assembling its primitives; open the component file only when the catalog example is
-not enough to use it correctly.
-
-## Aura component manager (every project, new or existing)
-Aura keeps a registry of the project's own components, tokens and conventions in `.aura/`, kept in sync
-by agent hooks (session start, after each Write/Edit/Bash, before stopping). **Ask it instead of scanning
-component folders.**
-- Not set up yet (no `.aura/` in the repo): `node <this-skill-folder>/manager/aura.mjs init` in the repo
-  root. It scans the repo, writes `.aura/` (registry, profile, rules, baseline, a vendored `bin/`) and adds
-  `aura` / `aura:check` npm scripts. Tell the user to commit `.aura/` (the cache is git-ignored).
-- Then, from the repo root:
-  ```bash
-  node .aura/bin/aura.mjs find "ô nhập liệu"     # the project's components for a need (vi/en)
-  node .aura/bin/aura.mjs show Button            # props, variants, description, where it is used
-  node .aura/bin/aura.mjs tokens                 # colors, fonts, status tokens (and which are text-safe)
-  node .aura/bin/aura.mjs check <file>           # rules; the hooks run this for you
-  node .aura/bin/aura.mjs describe <Name> --summary "…" --use "a; b" --avoid "…" --keywords "vi, en"
-  ```
-- The hooks **block** new violations: a component that duplicates an existing one, raw `<button>/<input>/…`
-  when the project has that primitive, color classes for tokens that don't exist, imports from a UI library
-  the project doesn't use. Read the message and fix it the way it says. Findings that existed before aura
-  was added (the baseline) don't block; fix them only if your change is about them.
-- After creating a component, describe it with `aura describe` (the stop hook asks for it), so the next
-  agent can find it.
+## Before building
+1. **New app?** Use the `aura-ui:new-app` skill (starter + `aura init`). Stack: React + Vite + TypeScript +
+   Tailwind v4 + shadcn/ui (Base UI) + lucide + react-router + TanStack Query/Table + react-hook-form + zod;
+   all 60+ shadcn components, ready-made blocks, vi-VN formatters (`src/lib/format.ts`) and tokens with a
+   chart palette and status colors. Don't switch frameworks or add another UI library.
+2. **Existing app without `.aura/`?** Run the `aura-ui:init` skill first (one-time scan).
+3. **Find components with the `aura-ui:find` skill** (`node .aura/bin/aura.mjs find "<need>"`, `show`,
+   `tokens`) instead of reading component folders. Prefer a block over re-assembling its primitives.
+   Heavy blocks (rich text editor, PDF/Word/Excel viewer) come from the `aura-ui:add-block` skill.
+4. Agent hooks check every component edit. If one blocks you, follow the `aura-ui:check` skill. After
+   creating a component, describe it (`aura-ui:describe`) so the next agent finds it.
 
 ## Working in an existing project
 The project's design system wins over the starter:
@@ -86,7 +33,7 @@ The project's design system wins over the starter:
 - **Follow its conventions** (listed in the session-start summary): file layout, CMS blocks (e.g. Payload:
   a new section is a new block with config + component, registered where blocks are rendered), routing,
   data fetching, i18n, existing formatting helpers.
-- Keep this skill's design rules (surface type, data color, spacing and layout, vi-VN, the 390/768/1440
+- Keep the design rules below (surface type, data color, spacing and layout, vi-VN, the 390/768/1440
   check). Showcase sites may use the project's existing gradients and motion; tools stay restrained.
 - Don't refactor or move existing components unless the task needs it; if you do, say what changed.
 
@@ -133,7 +80,7 @@ Before writing code, post a short brief in chat (5–10 lines, no more):
 Then implement in this order:
 1. **Design system**: edit `src/index.css` tokens (and add new ones such as `--gradient-primary`,
    `--shadow-elegant`, `--transition-smooth`, registered in `@theme inline`). Install and set the font.
-   See `references/design-system.md` for the token and variant patterns.
+   See `AURA/references/design-system.md` for the token and variant patterns.
 2. **Variants**: add the component variants you are about to use.
 3. **Screens**: small, focused components in their own files (`src/components/<feature>/…`); pages in
    `src/pages/`; routes in `src/App.tsx` above the catch-all. Replace the placeholder `Index.tsx`.
@@ -171,7 +118,7 @@ and everything else quiet:
   the user makes on this screen (on a dashboard, 4–5 KPI cards do; on a record or list screen they
   usually repeat what the list shows). Fields the user rarely needs go to a detail view, not a column.
 
-**Building a dashboard or overview page?** Read `references/dashboard.md` before the brief.
+**Building a dashboard or overview page?** Read `AURA/references/dashboard.md` before the brief.
 
 ## Spacing and layout
 Dense where the user scans many similar items, airy where they read. Cramped is not "efficient".
