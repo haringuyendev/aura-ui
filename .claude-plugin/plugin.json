@@ -1,7 +1,7 @@
 {
   "name": "aura-ui",
   "description": "UI skill for coding agents, built the way Lovable does it: a fixed React + Vite + Tailwind v4 + shadcn/ui starter, design system first, screens composed only from the starter's components, purposeful data color, band-layout dashboards and a 390/768/1440 self-check.",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "author": {
     "name": "MedViet AI"
   },
