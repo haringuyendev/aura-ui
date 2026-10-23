@@ -53,7 +53,9 @@ export function buildXlsx(columns: XlsxColumn[], rows: XlsxCell[][], sheetName =
     const fmt = columns[col].format ?? defaultFormat(v)
     const num = v instanceof Date ? serial(v) : v
     if (!Number.isFinite(num)) return ""
-    width[col] = Math.max(width[col], v instanceof Date ? 12 : String(Math.round(num)).length + 6)
+    // Excel shows "########" when a number or date doesn't fit, so size from the rendered length.
+    const shown = v instanceof Date ? (fmt ?? "dd/mm/yyyy").replace(/["\\]/g, "").length : String(Math.round(num)).length + Math.ceil(String(Math.round(num)).length / 3) + (fmt?.includes("₫") ? 2 : 0)
+    width[col] = Math.max(width[col], shown + 1)
     return `<c r="${ref}" s="${styleOf(fmt)}"><v>${num}</v></c>`
   }
 
