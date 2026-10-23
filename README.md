@@ -1,4 +1,4 @@
-# Aura UI (v0.9)
+# Aura UI (v1.0)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -34,7 +34,7 @@ skills/aura-ui/
   scripts/new-app.sh         copy starter sang thư mục mới và cài package
   addons/                    khối nặng cài khi cần: rich-text-editor (Tiptap), file-lightbox (PDF/Word/Excel/ảnh)
   scripts/add-block.mjs      cài add-on vào app: chép file, npm install, chép asset (font pdf.js)
-  scripts/scan-project.mjs   quét dự án có sẵn: stack, token, component, quy ước, lỗi token → .aura/
+  manager/                   Aura component manager: aura.mjs (init, find, show, tokens, check, describe, hook)
 evals/
   README.md                  quy trình A/B và 8 đề (bảng, form, dashboard)
   baseline/                  project gốc cho nhánh "không skill"
@@ -75,11 +75,20 @@ token và component của template, sửa file này là cả app đổi theo (đ
 3. Chạy `node skills/aura-ui/scripts/catalog.mjs sync`: tự cập nhật exports/variants từ code, báo mục
    còn thiếu hoặc thừa.
 
-## Dùng cho dự án có sẵn
-Skill không dùng starter mà theo design system của dự án:
+## Aura component manager
+Aura quản lý component của chính dự án: registry `.aura/` luôn khớp với code nhờ hook của agent.
 ```bash
-node skills/aura-ui/scripts/scan-project.mjs <repo>                     # → <repo>/.aura/profile.json, components.json
-node skills/aura-ui/scripts/catalog.mjs find hộp thoại --project <repo>/.aura
+node skills/aura-ui/manager/aura.mjs init        # trong repo dự án: quét, tạo .aura/, thêm script npm (app mới từ starter tự chạy)
+npm run aura -- find "ô nhập liệu"               # component phù hợp trong dự án
+npm run aura -- show Button                      # props, variant, mô tả, nơi đang dùng
+npm run aura -- tokens                           # màu, font, token trạng thái (cái nào dùng làm chữ được)
+npm run aura:check                               # kiểm tra file đã đổi (dùng cho pre-commit/CI)
 ```
-Agent ghép từ component của dự án, dùng token của dự án (thêm token còn thiếu đúng chỗ khai báo), theo quy
-ước của dự án (ví dụ block Payload), và báo các lỗi token có sẵn. Có thể thêm `.aura/` vào `.gitignore`.
+Hook (khai báo trong `hooks/hooks.json`, chỉ hoạt động ở repo có `.aura/`):
+- **SessionStart:** làm mới registry và đưa tóm tắt design system vào ngữ cảnh agent.
+- **PostToolUse (Write/Edit):** cập nhật registry, kiểm tra file; **chặn** component trùng, tự vẽ `<button>`/`<input>`
+  khi đã có linh kiện, token màu không tồn tại, thư viện UI lạ. Lỗi có sẵn từ trước (baseline) không chặn.
+- **PostToolUse (Bash):** phát hiện file component bị xoá/di chuyển, cập nhật registry.
+- **Stop:** không cho agent kết thúc khi còn lỗi hoặc component mới chưa có mô tả (`aura describe`).
+
+Commit `.aura/` (registry, profile, rules, baseline, bin) để cả team và CI dùng chung; `.aura/cache` được bỏ qua.
