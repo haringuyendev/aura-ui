@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Slop fixture</title>
+<!-- Negative fixture: every block below should trigger at least one audit finding. -->
+<style>
+  body { font-family: system-ui; margin: 0; background: #f8f7ff; }
+  .hero { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; padding: 64px; border-radius: 24px; margin: 24px; box-shadow: 0 25px 50px rgba(0,0,0,.25); }
+  .card { background: #fff; border-radius: 24px; padding: 24px; margin: 24px; box-shadow: 0 30px 60px rgba(139,92,246,.3); }
+  .faint { color: #c4c4d4; }
+  .tiny { font-size: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 4px; text-align: left; }
+  .icon-btn { width: 18px; height: 18px; border: 0; background: #ddd; }
+</style>
+</head>
+<body>
+  <section class="hero bg-purple-600 text-white">
+    <h1>🚀 Welcome to the Future of Healthcare ✨</h1>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+    <button>🔥 Get Started</button>
+  </section>
+  <div class="card shadow-2xl">
+    <p class="faint">Managed by John Doe at Acme Inc</p>
+    <p class="tiny faint">Last updated just now</p>
+    <button class="icon-btn"></button>
+    <table>
+      <thead><tr><th>Name</th><th>Visits</th><th>Balance</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th></tr></thead>
+      <tbody>
+        <tr><td>Patient 1</td><td>12</td><td>1.250.000 ₫</td><td></td><td></td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
+        <tr><td>Patient 2</td><td>3</td><td>980.000 ₫</td><td></td><td></td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
+        <tr><td>Patient 3</td><td>145</td><td>12.400.000 ₫</td><td></td><td></td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
+        <tr><td>Patient 4</td><td>7</td><td>0 ₫</td><td></td><td></td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

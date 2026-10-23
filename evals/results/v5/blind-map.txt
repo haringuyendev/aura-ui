@@ -1,0 +1,3 @@
+clinic: X=A Y=C
+shop: X=A Y=C
+support: X=C Y=A

@@ -1,0 +1,2 @@
+lab: X=A Y=C
+lab: X=C2 Y=A

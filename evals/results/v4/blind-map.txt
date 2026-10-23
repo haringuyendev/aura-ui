@@ -1,0 +1,3 @@
+lab: X=A Y=C
+clinic: X=C Y=A
+shop: X=C Y=A

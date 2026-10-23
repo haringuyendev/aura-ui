@@ -1,0 +1,9 @@
+{
+  "name": "aura-ui-scripts",
+  "private": true,
+  "type": "module",
+  "description": "Audit tooling for the aura-ui skill. Run `npm install` once in this folder.",
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
+}
