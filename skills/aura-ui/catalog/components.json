@@ -45,7 +45,8 @@
     },
     "deps": [
       "@base-ui/react/button"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "button-group",
@@ -78,7 +79,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "context-menu",
@@ -115,7 +117,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/context-menu"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "dropdown-menu",
@@ -159,7 +162,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/menu"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "attachment",
@@ -168,13 +172,13 @@
     "use_when": [
       "uploaded files in chat, forms or records"
     ],
-    "avoid_when": "—",
+    "avoid_when": "Picking files to upload; use file-upload (it renders attachments for you).",
     "keywords": [
-      "file",
-      "upload",
-      "attachment",
+      "file chip",
+      "attachment card",
+      "file preview",
       "tệp đính kèm",
-      "tải lên"
+      "hiển thị tệp"
     ],
     "example": "<Attachment><AttachmentMedia>…</AttachmentMedia><AttachmentContent><AttachmentTitle>hoa-don.pdf</AttachmentTitle></AttachmentContent></Attachment>",
     "related": [],
@@ -204,7 +208,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "bubble",
@@ -244,7 +249,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "message",
@@ -277,7 +283,8 @@
       "MessageHeader"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "message-scroller",
@@ -307,7 +314,8 @@
       "useMessageScrollerVisibility"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "avatar",
@@ -338,7 +346,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/avatar"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "badge",
@@ -376,13 +385,18 @@
         "destructive",
         "outline",
         "ghost",
-        "link"
+        "link",
+        "success",
+        "warning",
+        "info",
+        "muted"
       ]
     },
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "carousel",
@@ -414,7 +428,8 @@
     "variants": {},
     "deps": [
       "embla-carousel-react"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "chart",
@@ -452,7 +467,8 @@
     "variants": {},
     "deps": [
       "recharts"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "code-block",
@@ -488,6 +504,78 @@
         "destructive"
       ]
     },
+    "deps": [],
+    "kind": "primitive"
+  },
+  {
+    "name": "data-table",
+    "category": "data",
+    "kind": "block",
+    "summary": "Full table on TanStack Table: sortable headers, search box, pagination, row click, no-results state, and a card layout on mobile.",
+    "use_when": [
+      "lists of records users search, sort and open (orders, patients, staff, tickets)"
+    ],
+    "avoid_when": "Tiny static tables (< 10 rows, no sorting); use table directly.",
+    "keywords": [
+      "data table",
+      "datatable",
+      "sortable table",
+      "list",
+      "grid",
+      "tanstack",
+      "pagination",
+      "bảng dữ liệu",
+      "danh sách",
+      "sắp xếp",
+      "tìm kiếm",
+      "phân trang"
+    ],
+    "example": "<DataTable columns={columns} data={orders} searchPlaceholder=\"Tìm mã đơn, khách, SĐT\" onRowClick={openOrder} renderMobileRow={(o) => <OrderRow order={o} />} />  // column meta: { align: \"right\", className: \"w-32\" }",
+    "related": [
+      "table",
+      "pagination",
+      "empty",
+      "sheet"
+    ],
+    "import": "@/components/blocks/data-table",
+    "exports": [
+      "DataTable",
+      "ColumnDef"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "description-list",
+    "category": "data",
+    "kind": "block",
+    "summary": "Label–value pairs in a responsive grid; empty values show '—'.",
+    "use_when": [
+      "record detail pages and drawers",
+      "order/patient/customer summaries",
+      "confirmation steps"
+    ],
+    "avoid_when": "Editable forms; use form fields.",
+    "keywords": [
+      "details",
+      "key value",
+      "properties",
+      "definition list",
+      "thông tin chi tiết",
+      "cặp nhãn giá trị",
+      "chi tiết"
+    ],
+    "example": "<DescriptionList columns={2} items={[{ label: \"Khách hàng\", value: \"Nguyễn An\" }, { label: \"Địa chỉ\", value: addr, full: true }]} />",
+    "related": [
+      "card",
+      "sheet"
+    ],
+    "import": "@/components/blocks/description-list",
+    "exports": [
+      "DescriptionList",
+      "DescriptionItem"
+    ],
+    "variants": {},
     "deps": []
   },
   {
@@ -541,7 +629,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "kbd",
@@ -564,7 +653,8 @@
       "KbdGroup"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "marker",
@@ -601,7 +691,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "progress",
@@ -632,7 +723,44 @@
     "variants": {},
     "deps": [
       "@base-ui/react/progress"
-    ]
+    ],
+    "kind": "primitive"
+  },
+  {
+    "name": "stat",
+    "category": "data",
+    "kind": "block",
+    "summary": "KPI card (Stat) with big tabular value, unit, change (Delta) and baseline caption; Delta colors the change by good/bad.",
+    "use_when": [
+      "KPIs and summary numbers on dashboards, reports and record headers",
+      "showing change vs a previous period"
+    ],
+    "avoid_when": "Long lists of numbers; use a table. More than 5 in a row.",
+    "keywords": [
+      "kpi",
+      "metric",
+      "stat card",
+      "number card",
+      "delta",
+      "change",
+      "so với kỳ trước",
+      "chỉ số",
+      "thẻ số liệu",
+      "tăng giảm"
+    ],
+    "example": "<Stat label=\"Thời gian chờ TB\" value={formatDuration(125)} delta={<Delta value={31} good=\"down\" format={(v) => formatSigned(v, \" giây\", 0)} />} caption=\"ngưỡng 2 phút\" />",
+    "related": [
+      "chart",
+      "progress",
+      "format"
+    ],
+    "import": "@/components/blocks/stat",
+    "exports": [
+      "Delta",
+      "Stat"
+    ],
+    "variants": {},
+    "deps": []
   },
   {
     "name": "table",
@@ -671,7 +799,8 @@
       "TableCaption"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "trace",
@@ -683,12 +812,13 @@
     "avoid_when": "Simple static lists.",
     "keywords": [
       "timeline",
-      "steps log",
+      "process log",
       "activity",
       "history",
       "dòng thời gian",
       "lịch sử",
-      "các bước"
+      "các bước xử lý",
+      "tiến trình"
     ],
     "example": "<Trace><TraceLine status=\"running\" /><TraceTitle>Đang đồng bộ</TraceTitle></Trace>",
     "related": [],
@@ -704,7 +834,8 @@
       "TraceCollapsibleContent"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "alert",
@@ -738,10 +869,14 @@
     "variants": {
       "variant": [
         "default",
-        "destructive"
+        "destructive",
+        "warning",
+        "success",
+        "info"
       ]
     },
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "empty",
@@ -778,7 +913,8 @@
         "icon"
       ]
     },
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "skeleton",
@@ -803,7 +939,8 @@
       "Skeleton"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "spinner",
@@ -828,7 +965,8 @@
       "Spinner"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "toast",
@@ -867,7 +1005,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/toast"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "calendar",
@@ -899,7 +1038,8 @@
     "variants": {},
     "deps": [
       "react-day-picker"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "checkbox",
@@ -930,7 +1070,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/checkbox"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "combobox",
@@ -975,7 +1116,46 @@
       "useComboboxAnchor"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
+  },
+  {
+    "name": "date-range-picker",
+    "category": "form",
+    "kind": "block",
+    "summary": "Period picker: presets (Hôm nay, 7 ngày qua, 30 ngày qua, Tháng này) plus a custom range on a Vietnamese calendar.",
+    "use_when": [
+      "dashboard and report periods",
+      "filtering lists by date"
+    ],
+    "avoid_when": "Picking a single date in a form; use calendar in a popover.",
+    "keywords": [
+      "date range",
+      "period",
+      "time range",
+      "filter by date",
+      "khoảng thời gian",
+      "khoảng ngày",
+      "chọn kỳ",
+      "từ ngày đến ngày",
+      "hôm nay"
+    ],
+    "example": "<DateRangePicker value={range} onChange={setRange} />",
+    "related": [
+      "calendar",
+      "toggle-group",
+      "page-header"
+    ],
+    "import": "@/components/blocks/date-range-picker",
+    "exports": [
+      "DateRangePicker",
+      "DateRange",
+      "Preset"
+    ],
+    "variants": {},
+    "deps": [
+      "react-day-picker"
+    ]
   },
   {
     "name": "field",
@@ -1020,6 +1200,76 @@
         "responsive"
       ]
     },
+    "deps": [],
+    "kind": "primitive"
+  },
+  {
+    "name": "file-upload",
+    "category": "form",
+    "kind": "block",
+    "summary": "Drag-and-drop or click-to-pick file area, size limit with message, chosen files listed as removable attachments.",
+    "use_when": [
+      "attaching documents, images or invoices to a record or form"
+    ],
+    "avoid_when": "Avatar pickers with cropping (build on top of it).",
+    "keywords": [
+      "upload",
+      "file",
+      "dropzone",
+      "attachment",
+      "drag and drop",
+      "tải lên",
+      "tệp",
+      "đính kèm",
+      "kéo thả",
+      "chọn tệp",
+      "upload file"
+    ],
+    "example": "<FileUpload value={files} onChange={setFiles} accept=\"image/*,.pdf\" maxSize={10e6} hint=\"PDF hoặc ảnh, tối đa 10 MB\" />",
+    "related": [
+      "attachment",
+      "form"
+    ],
+    "import": "@/components/blocks/file-upload",
+    "exports": [
+      "FileUpload"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "form",
+    "category": "form",
+    "kind": "block",
+    "summary": "Form wired to react-hook-form with a zod resolver; FormField renders label, control, description and the validation message.",
+    "use_when": [
+      "any form with validation: create/edit records, settings, sign-up"
+    ],
+    "avoid_when": "A single search box or instant filters.",
+    "keywords": [
+      "form",
+      "validation",
+      "react-hook-form",
+      "zod",
+      "submit",
+      "biểu mẫu",
+      "kiểm tra dữ liệu",
+      "báo lỗi",
+      "nhập liệu"
+    ],
+    "example": "const form = useForm({ resolver: zodResolver(schema), defaultValues }); <Form form={form} onSubmit={save}><FormField name=\"name\" label=\"Tên\">{({ field, id, invalid }) => <Input id={id} aria-invalid={invalid} {...field} />}</FormField></Form>",
+    "related": [
+      "field",
+      "input",
+      "number-input"
+    ],
+    "import": "@/components/blocks/form",
+    "exports": [
+      "Form",
+      "FormField",
+      "zodResolver"
+    ],
+    "variants": {},
     "deps": []
   },
   {
@@ -1048,7 +1298,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/input"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "input-group",
@@ -1087,7 +1338,8 @@
         "block-end"
       ]
     },
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "input-otp",
@@ -1114,7 +1366,8 @@
     "variants": {},
     "deps": [
       "input-otp"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "label",
@@ -1135,7 +1388,8 @@
       "Label"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "native-select",
@@ -1156,6 +1410,40 @@
       "NativeSelect",
       "NativeSelectOptGroup",
       "NativeSelectOption"
+    ],
+    "variants": {},
+    "deps": [],
+    "kind": "primitive"
+  },
+  {
+    "name": "number-input",
+    "category": "form",
+    "kind": "block",
+    "summary": "Numeric input that shows locale grouping while typing (1.250.000) and returns a number, with a unit suffix.",
+    "use_when": [
+      "money, percentages, quantities, durations"
+    ],
+    "avoid_when": "Codes or phone numbers (they are text, not numbers).",
+    "keywords": [
+      "money input",
+      "currency",
+      "amount",
+      "number",
+      "price",
+      "nhập tiền",
+      "số tiền",
+      "giá",
+      "số lượng",
+      "phần trăm"
+    ],
+    "example": "<NumberInput value={amount} onChange={setAmount} suffix=\"₫\" />",
+    "related": [
+      "input-group",
+      "form"
+    ],
+    "import": "@/components/blocks/number-input",
+    "exports": [
+      "NumberInput"
     ],
     "variants": {},
     "deps": []
@@ -1199,7 +1487,8 @@
       "QuestionnaireTitle"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "radio-group",
@@ -1229,7 +1518,8 @@
     "deps": [
       "@base-ui/react/radio",
       "@base-ui/react/radio-group"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "select",
@@ -1267,7 +1557,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/select"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "slider",
@@ -1292,7 +1583,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/slider"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "switch",
@@ -1320,7 +1612,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/switch"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "textarea",
@@ -1343,7 +1636,8 @@
       "Textarea"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "toggle",
@@ -1379,7 +1673,8 @@
     },
     "deps": [
       "@base-ui/react/toggle"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "toggle-group",
@@ -1412,7 +1707,8 @@
     "deps": [
       "@base-ui/react/toggle",
       "@base-ui/react/toggle-group"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "accordion",
@@ -1445,7 +1741,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/accordion"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "aspect-ratio",
@@ -1468,7 +1765,8 @@
       "AspectRatio"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "card",
@@ -1505,7 +1803,8 @@
       "CardContent"
     ],
     "variants": {},
-    "deps": []
+    "deps": [],
+    "kind": "primitive"
   },
   {
     "name": "collapsible",
@@ -1536,7 +1835,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/collapsible"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "direction",
@@ -1561,7 +1861,37 @@
     "variants": {},
     "deps": [
       "@base-ui/react/direction-provider"
-    ]
+    ],
+    "kind": "primitive"
+  },
+  {
+    "name": "page-header",
+    "category": "layout",
+    "kind": "block",
+    "summary": "Page title block: breadcrumb, title, description, actions on the right, optional filter row below.",
+    "use_when": [
+      "the top of every page"
+    ],
+    "avoid_when": "Card titles inside the page; use CardTitle.",
+    "keywords": [
+      "page title",
+      "header",
+      "heading",
+      "tiêu đề trang",
+      "đầu trang",
+      "thanh tiêu đề"
+    ],
+    "example": "<PageHeader title=\"Đơn hàng\" description=\"128 đơn chờ xử lý\" actions={<Button>Tạo đơn</Button>}><DateRangePicker value={range} onChange={setRange} /></PageHeader>",
+    "related": [
+      "breadcrumb",
+      "date-range-picker"
+    ],
+    "import": "@/components/blocks/page-header",
+    "exports": [
+      "PageHeader"
+    ],
+    "variants": {},
+    "deps": []
   },
   {
     "name": "resizable",
@@ -1589,7 +1919,8 @@
     "variants": {},
     "deps": [
       "react-resizable-panels"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "scroll-area",
@@ -1615,7 +1946,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/scroll-area"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "separator",
@@ -1642,7 +1974,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/separator"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "sidebar",
@@ -1707,7 +2040,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "breadcrumb",
@@ -1739,7 +2073,8 @@
     "deps": [
       "@base-ui/react/merge-props",
       "@base-ui/react/use-render"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "command",
@@ -1778,7 +2113,8 @@
     "variants": {},
     "deps": [
       "cmdk"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "menubar",
@@ -1818,7 +2154,8 @@
     "deps": [
       "@base-ui/react/menu",
       "@base-ui/react/menubar"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "navigation-menu",
@@ -1855,7 +2192,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/navigation-menu"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "pagination",
@@ -1884,6 +2222,43 @@
       "PaginationLink",
       "PaginationNext",
       "PaginationPrevious"
+    ],
+    "variants": {},
+    "deps": [],
+    "kind": "primitive"
+  },
+  {
+    "name": "stepper",
+    "category": "navigation",
+    "kind": "block",
+    "summary": "Step indicator for multi-step flows: done / current / upcoming, horizontal from sm and vertical on mobile.",
+    "use_when": [
+      "wizards, checkout, onboarding, long forms split into steps"
+    ],
+    "avoid_when": "Peer sections the user can visit in any order; use tabs.",
+    "keywords": [
+      "stepper",
+      "steps",
+      "wizard",
+      "progress steps",
+      "multi-step",
+      "các bước",
+      "từng bước",
+      "quy trình",
+      "checkout",
+      "thanh toán",
+      "đặt hàng"
+    ],
+    "example": "<Stepper steps={[{ title: \"Thông tin\" }, { title: \"Ưu đãi\" }, { title: \"Xác nhận\" }]} current={1} />",
+    "related": [
+      "questionnaire",
+      "tabs",
+      "form"
+    ],
+    "import": "@/components/blocks/stepper",
+    "exports": [
+      "Stepper",
+      "Step"
     ],
     "variants": {},
     "deps": []
@@ -1926,7 +2301,8 @@
     },
     "deps": [
       "@base-ui/react/tabs"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "alert-dialog",
@@ -1962,7 +2338,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/alert-dialog"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "dialog",
@@ -2000,7 +2377,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/dialog"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "drawer",
@@ -2036,7 +2414,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/drawer"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "hover-card",
@@ -2062,7 +2441,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/preview-card"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "popover",
@@ -2094,7 +2474,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/popover"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "sheet",
@@ -2132,7 +2513,8 @@
     "variants": {},
     "deps": [
       "@base-ui/react/dialog"
-    ]
+    ],
+    "kind": "primitive"
   },
   {
     "name": "tooltip",
@@ -2162,6 +2544,54 @@
     "variants": {},
     "deps": [
       "@base-ui/react/tooltip"
-    ]
+    ],
+    "kind": "primitive"
+  },
+  {
+    "name": "format",
+    "category": "util",
+    "kind": "util",
+    "summary": "Locale formatting helpers (vi-VN): numbers, compact amounts, money, percent, signed change, points, dates, times, durations in words, relative time.",
+    "use_when": [
+      "every number, amount, date and duration shown in the UI"
+    ],
+    "avoid_when": "Raw toFixed(), toLocaleString without locale, or ISO dates on screen.",
+    "keywords": [
+      "format",
+      "number format",
+      "currency",
+      "money",
+      "date format",
+      "duration",
+      "định dạng",
+      "tiền",
+      "ngày giờ",
+      "thời lượng",
+      "phần trăm"
+    ],
+    "example": "formatMoney(1284500000, { compact: true }) // \"1,3 tỷ ₫\"  formatDuration(125) // \"2 phút 5 giây\"  formatPoints(1.3) // \"+1,3 điểm\"  formatDate(d) // \"23/10/2026\"",
+    "related": [
+      "stat",
+      "number-input"
+    ],
+    "import": "@/lib/format",
+    "exports": [
+      "LOCALE",
+      "CURRENCY",
+      "formatNumber",
+      "formatCompact",
+      "formatMoney",
+      "formatPercent",
+      "formatSigned",
+      "formatPoints",
+      "formatDate",
+      "formatDayMonth",
+      "formatTime",
+      "formatDateTime",
+      "formatDuration",
+      "formatRelative"
+    ],
+    "variants": {},
+    "deps": []
   }
 ]

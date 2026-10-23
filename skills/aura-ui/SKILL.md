@@ -19,7 +19,10 @@ react-router + TanStack Query. Do not switch frameworks or add another UI librar
 ```bash
 bash <this-skill-folder>/scripts/new-app.sh <target-dir>
 ```
-The starter has all 60+ shadcn components in `src/components/ui/`, tokens in `src/index.css`
+The starter has all 60+ shadcn components in `src/components/ui/`, ready-made blocks in
+`src/components/blocks/` (page-header, stat + delta, data-table, description-list, form with zod,
+number-input, date-range-picker, file-upload, stepper), vi-VN formatters in `src/lib/format.ts`,
+tokens in `src/index.css`
 (including a 5-color `chart-1…5` palette and `success` / `warning` / `info` / `destructive` status
 colors, all AA on the background; retune their hues to the brand but keep them colorful),
 routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
@@ -27,15 +30,15 @@ routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
 **Existing project:** keep its stack. Apply the design-system rules below to whatever it uses.
 
 ## Finding the right component
-`catalog/components.json` describes every starter component: what it is for, when to use and avoid
-it, exports, variants and a one-line example. Query it instead of reading component files:
+`catalog/components.json` describes every starter component (`kind`: primitive, block or util): what
+it is for, when to use and avoid it, exports, variants and a one-line example. Query it instead of reading component files:
 ```bash
 node <this-skill-folder>/scripts/catalog.mjs find chọn khoảng ngày   # best matches (vi/en, accents optional)
 node <this-skill-folder>/scripts/catalog.mjs show calendar popover   # full entries: exports, variants, example
 node <this-skill-folder>/scripts/catalog.mjs list form               # all components in a category
 ```
-Categories: layout, navigation, data, form, action, overlay, feedback, chat. Before building any part
-of a screen, `find` the component for it; open the component file only when the catalog example is
+Categories: layout, navigation, data, form, action, overlay, feedback, chat, util. Before building any
+part of a screen, `find` the component for it, and prefer a block over re-assembling its primitives; open the component file only when the catalog example is
 not enough to use it correctly.
 
 ## Hard rules
@@ -55,12 +58,13 @@ not enough to use it correctly.
    readable on the surface it sits on.
 6. **If the user specifies a design, follow it to the letter** (colors, font, layout, reference site).
 7. **Format for the user's locale.** Numbers, money, percentages, dates and times go through `Intl`
-   with the UI's locale (Vietnamese UI → `vi-VN`: `12,8`, `1.250.000 ₫`, `23/10/2026`). Never print
+   with the UI's locale (Vietnamese UI → `vi-VN`: `12,8`, `1.250.000 ₫`, `23/10/2026`); use the helpers
+   in `src/lib/format.ts` (formatMoney, formatPercent, formatDuration, formatDate…). Never print
    raw `toFixed()` output or ISO dates. Durations read as words (`2 phút 5 giây`,
    `1 giờ 35 phút`), never `2:05`.
 8. **Compose only from the starter's components.** Every card, table, chart, badge, tab, toggle, sheet,
-   dialog, tooltip and form control comes from `src/components/ui/` (charts through `chart.tsx` /
-   recharts). Do not hand-roll an equivalent with raw `div`s or inline `<svg>`. If something is missing,
+   dialog, tooltip and form control comes from `src/components/ui/` or `src/components/blocks/`
+   (charts through `chart.tsx` / recharts). Do not hand-roll an equivalent with raw `div`s or inline `<svg>`. If something is missing,
    add a variant to the closest component or compose existing ones; layout wrappers (grid, flex, spacing)
    are the only free-form markup.
 

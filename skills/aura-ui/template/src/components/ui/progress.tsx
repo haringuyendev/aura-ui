@@ -3,12 +3,21 @@
 import { Progress as ProgressPrimitive } from "@base-ui/react/progress"
 import { cn } from "cn"
 
+const progressTones = {
+  default: "bg-primary",
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+  muted: "bg-muted-foreground/50",
+} as const
+
 function Progress({
   className,
   children,
   value,
+  tone = "default",
   ...props
-}: ProgressPrimitive.Root.Props) {
+}: ProgressPrimitive.Root.Props & { tone?: keyof typeof progressTones }) {
   return (
     <ProgressPrimitive.Root
       value={value}
@@ -18,7 +27,7 @@ function Progress({
     >
       {children}
       <ProgressTrack>
-        <ProgressIndicator />
+        <ProgressIndicator className={progressTones[tone]} />
       </ProgressTrack>
     </ProgressPrimitive.Root>
   )

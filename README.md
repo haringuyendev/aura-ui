@@ -1,4 +1,4 @@
-# Aura UI (v0.5)
+# Aura UI (v0.6)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -24,8 +24,11 @@ skills/aura-ui/
   references/design-system.md  mẫu token, gradient, shadow, font, animation, variant (Tailwind v4)
   references/dashboard.md    bố cục dải, KPI, khung "Cần xử lý", biểu đồ, danh sách
   template/                  starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component,
-                             Base UI) + react-router + TanStack Query; token màu biểu đồ và trạng thái
-  catalog/components.json    danh mục 63 component: tác dụng, khi dùng/không dùng, export, variant, ví dụ
+                             Base UI) + react-router + TanStack Query/Table + react-hook-form + zod;
+                             src/components/blocks/ (page-header, stat, data-table, description-list,
+                             form, number-input, date-range-picker, file-upload, stepper), src/lib/format.ts
+  catalog/components.json    danh mục 73 mục (63 linh kiện shadcn, 9 khối ghép sẵn, format): tác dụng,
+                             khi dùng/không dùng, export, variant, ví dụ
   scripts/catalog.mjs        tra danh mục: find <từ khoá> | show <tên> | list [nhóm] | sync
   scripts/new-app.sh         copy starter sang thư mục mới và cài package
 evals/
@@ -61,7 +64,8 @@ token và component của template, sửa file này là cả app đổi theo (đ
 11 dòng token, không sửa code màn hình). Hình dáng component sửa trong `src/components/ui/`.
 
 ## Thêm hoặc sửa component
-1. Thêm file vào `skills/aura-ui/template/src/components/ui/` (ví dụ `npx shadcn add <tên>` trong template).
+1. Thêm file vào `skills/aura-ui/template/src/components/ui/` (ví dụ `npx shadcn add <tên>` trong template)
+   hoặc khối tự viết vào `template/src/components/blocks/` (chỉ ghép từ `ui/`, dùng token).
 2. Thêm một mục vào `skills/aura-ui/catalog/components.json` (name, category, summary, use_when,
    avoid_when, keywords có cả tiếng Việt, example, related).
 3. Chạy `node skills/aura-ui/scripts/catalog.mjs sync`: tự cập nhật exports/variants từ code, báo mục

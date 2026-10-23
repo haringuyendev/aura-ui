@@ -1,16 +1,22 @@
 #!/usr/bin/env node
-// Component catalog for the aura-ui starter.
+// Component catalog for the aura-ui starter (ui primitives, blocks and lib/format).
 //   node catalog.mjs find <words…>   best matches for a need (Vietnamese or English, accents optional)
 //   node catalog.mjs show <name…>    full entries
 //   node catalog.mjs list [category] one line per component
-//   node catalog.mjs sync            refresh exports/variants/deps from template/src/components/ui (maintainers)
+//   node catalog.mjs sync            refresh exports/variants/deps from the starter's source (maintainers)
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const catalogPath = path.join(root, 'catalog', 'components.json')
-const uiDir = path.join(root, 'template', 'src', 'components', 'ui')
+const src = path.join(root, 'template', 'src')
+// Where catalog entries live in the starter: shadcn primitives, composed blocks, and utilities.
+const sources = [
+  { dir: path.join(src, 'components', 'ui'), ext: '.tsx', importBase: '@/components/ui/' },
+  { dir: path.join(src, 'components', 'blocks'), ext: '.tsx', importBase: '@/components/blocks/' },
+  { dir: path.join(src, 'lib'), ext: '.ts', importBase: '@/lib/', only: ['format'] },
+]
 
 const load = () => JSON.parse(fs.readFileSync(catalogPath, 'utf8'))
 const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
@@ -18,7 +24,10 @@ const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').rep
 function extract(file) {
   const s = fs.readFileSync(file, 'utf8')
   const exportsBlock = (s.match(/export\s*\{([\s\S]*?)\}/) || [, ''])[1]
-  const exports = exportsBlock.split(',').map((x) => x.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()).filter(Boolean)
+  const exports = [
+    ...exportsBlock.split(',').map((x) => x.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()),
+    ...[...s.matchAll(/^export (?:async )?(?:function|const) (\w+)/gm)].map((m) => m[1]),
+  ].filter(Boolean)
   const deps = [...new Set((s.match(/from "(@base-ui\/react\/[a-z-]+|recharts|cmdk|vaul|embla-carousel-react|input-otp|react-day-picker|react-resizable-panels)"/g) || []).map((x) => x.slice(6, -1)))]
   const variants = {}
   const block = s.match(/variants:\s*\{([\s\S]*?)\n {4}\},?\n/)
@@ -29,12 +38,20 @@ function extract(file) {
 function sync() {
   const entries = load()
   const byName = new Map(entries.map((e) => [e.name, e]))
-  const files = fs.readdirSync(uiDir).filter((f) => f.endsWith('.tsx')).map((f) => f.replace(/\.tsx$/, ''))
+  const found = new Map()
+  for (const { dir, ext, importBase, only } of sources) {
+    if (!fs.existsSync(dir)) continue
+    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(ext))) {
+      const name = f.slice(0, -ext.length)
+      if (!only || only.includes(name)) found.set(name, { file: path.join(dir, f), import: importBase + name })
+    }
+  }
+  const files = [...found.keys()]
   const missing = files.filter((n) => !byName.has(n))
-  const stale = entries.filter((e) => !files.includes(e.name)).map((e) => e.name)
+  const stale = entries.filter((e) => !found.has(e.name)).map((e) => e.name)
   for (const e of entries) {
-    if (!files.includes(e.name)) continue
-    Object.assign(e, { import: `@/components/ui/${e.name}` }, extract(path.join(uiDir, `${e.name}.tsx`)))
+    const hit = found.get(e.name)
+    if (hit) Object.assign(e, { import: hit.import }, extract(hit.file))
   }
   entries.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
   fs.writeFileSync(catalogPath, JSON.stringify(entries, null, 2) + '\n')
@@ -60,7 +77,8 @@ function score(e, words, phrase) {
   }
   // whole query equals or contains a keyword phrase ("khoảng ngày", "multi select")
   for (const k of e.keywords) { const f = fold(k); if (f.includes(' ') && phrase.includes(f)) total += 4 }
-  return total
+  // prefer a ready-made block over the primitive it is built from when they tie
+  return total + (total > 0 && e.kind === 'block' ? 0.5 : 0)
 }
 
 function line(e) {

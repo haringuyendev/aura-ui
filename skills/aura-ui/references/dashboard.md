@@ -19,6 +19,7 @@ On mobile: header → attention → KPIs (2 per row) → the rest stacked.
 Never put a tall block (long list, chart) beside short cards (KPIs) in the same row.
 
 ## 2. KPI cards
+Use the `Stat` block with a `Delta` (good/bad coloring built in) and `formatMoney`/`formatPercent`.
 - 4–5 cards. Each: label, big tabular number with unit in the foreground color (the number itself is
   not tinted, even when it misses target), delta vs the comparison period colored by
   good/bad (`text-success` / `text-destructive`, arrow + value), and the comparison baseline in muted

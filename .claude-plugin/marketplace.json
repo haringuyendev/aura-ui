@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Aura UI: Lovable-style UI skill for coding agents",
-    "version": "0.5.0"
+    "version": "0.6.0"
   },
   "plugins": [
     {
       "name": "aura-ui",
       "source": "./",
       "description": "UI skill for coding agents, built the way Lovable does it: a fixed React + Vite + Tailwind v4 + shadcn/ui starter, design system first, screens composed only from the starter's components, purposeful data color, band-layout dashboards and a 390/768/1440 self-check.",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "category": "design"
     }
   ]
