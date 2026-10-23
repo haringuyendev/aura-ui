@@ -17,6 +17,13 @@ const sources = [
   { dir: path.join(src, 'components', 'blocks'), ext: '.tsx', importBase: '@/components/blocks/' },
   { dir: path.join(src, 'lib'), ext: '.ts', importBase: '@/lib/', only: ['format'] },
 ]
+// Optional heavy blocks installed on demand with add-block.mjs.
+const addonsDir = path.join(root, 'addons')
+if (fs.existsSync(addonsDir))
+  for (const a of fs.readdirSync(addonsDir)) {
+    const dir = path.join(addonsDir, a, 'files', 'src', 'components', 'blocks')
+    if (fs.existsSync(dir)) sources.push({ dir, ext: '.tsx', importBase: '@/components/blocks/', addon: a })
+  }
 
 const load = () => JSON.parse(fs.readFileSync(catalogPath, 'utf8'))
 const fold = (s) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
@@ -39,11 +46,12 @@ function sync() {
   const entries = load()
   const byName = new Map(entries.map((e) => [e.name, e]))
   const found = new Map()
-  for (const { dir, ext, importBase, only } of sources) {
+  for (const src of sources) {
+    const { dir, ext, importBase, only } = src
     if (!fs.existsSync(dir)) continue
     for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(ext))) {
       const name = f.slice(0, -ext.length)
-      if (!only || only.includes(name)) found.set(name, { file: path.join(dir, f), import: importBase + name })
+      if (!only || only.includes(name)) found.set(name, { file: path.join(dir, f), import: importBase + name, addon: src.addon })
     }
   }
   const files = [...found.keys()]
@@ -51,7 +59,7 @@ function sync() {
   const stale = entries.filter((e) => !found.has(e.name)).map((e) => e.name)
   for (const e of entries) {
     const hit = found.get(e.name)
-    if (hit) Object.assign(e, { import: hit.import }, extract(hit.file))
+    if (hit) Object.assign(e, { import: hit.import }, hit.addon && { install: `node <this-skill-folder>/scripts/add-block.mjs ${hit.addon} <app-dir>` }, extract(hit.file))
   }
   entries.sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
   fs.writeFileSync(catalogPath, JSON.stringify(entries, null, 2) + '\n')
@@ -78,17 +86,18 @@ function score(e, words, phrase) {
   // whole query equals or contains a keyword phrase ("khoảng ngày", "multi select")
   for (const k of e.keywords) { const f = fold(k); if (f.includes(' ') && phrase.includes(f)) total += 4 }
   // prefer a ready-made block over the primitive it is built from when they tie
-  return total + (total > 0 && e.kind === 'block' ? 0.5 : 0)
+  return total + (total > 0 && (e.kind === 'block' || e.kind === 'addon') ? 0.5 : 0)
 }
 
 function line(e) {
-  return `${e.name.padEnd(16)} [${e.category}] ${e.summary}`
+  return `${e.name.padEnd(16)} [${e.category}${e.kind === 'addon' ? ', add-on' : ''}] ${e.summary}`
 }
 
 function show(e) {
   const v = Object.entries(e.variants || {}).map(([k, vals]) => `${k}: ${vals.join(' | ')}`).join('; ')
   return [
-    `## ${e.name}  (${e.category})  import from "${e.import}"`,
+    `## ${e.name}  (${e.category}${e.kind === 'addon' ? ', add-on' : ''})  import from "${e.import}"`,
+    e.install && `Install first: ${e.install}`,
     e.summary,
     `Use when: ${e.use_when.join('; ')}`,
     `Avoid when: ${e.avoid_when}`,

@@ -1,0 +1,14 @@
+{
+  "name": "rich-text-editor",
+  "summary": "Tiptap rich text editor with a token-styled toolbar, plus RichTextContent to render saved HTML safely (DOMPurify).",
+  "dependencies": {
+    "@tiptap/react": "^3.32.0",
+    "@tiptap/pm": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
+    "@tiptap/extensions": "^3.32.0",
+    "@tiptap/extension-text-align": "^3.32.0",
+    "@tiptap/extension-table": "^3.32.0",
+    "dompurify": "^3.4.17"
+  },
+  "assets": []
+}

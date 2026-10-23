@@ -37,6 +37,14 @@ node <this-skill-folder>/scripts/catalog.mjs find chọn khoảng ngày   # best
 node <this-skill-folder>/scripts/catalog.mjs show calendar popover   # full entries: exports, variants, example
 node <this-skill-folder>/scripts/catalog.mjs list form               # all components in a category
 ```
+**Add-ons** (`kind: addon`) are heavy blocks kept out of the starter: `rich-text-editor` /
+`rich-text-content` (Tiptap) and `file-lightbox` (PDF, Word, Excel, images). The catalog shows their
+install command; run it once per app before importing them:
+```bash
+node <this-skill-folder>/scripts/add-block.mjs file-lightbox <app-dir>   # copies files, npm install, assets
+node <this-skill-folder>/scripts/add-block.mjs list
+```
+
 Categories: layout, navigation, data, form, action, overlay, feedback, chat, util. Before building any
 part of a screen, `find` the component for it, and prefer a block over re-assembling its primitives; open the component file only when the catalog example is
 not enough to use it correctly.
