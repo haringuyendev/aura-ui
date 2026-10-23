@@ -1,13 +1,21 @@
 import type { Column, Row } from "@tanstack/react-table"
 
+import { formatDate } from "@/lib/format"
+
 /** Human label of a column: meta.label, a string header, or the id. */
 export function columnLabel<TData>(c: Column<TData, unknown>) {
   const h = c.columnDef.header
   return c.columnDef.meta?.label ?? (typeof h === "string" ? h : c.id)
 }
 
+/** Export value of a cell: meta.exportValue, else the accessor value. */
+export function cellValue<TData>(c: Column<TData, unknown>, r: Row<TData>) {
+  const fn = c.columnDef.meta?.exportValue
+  return (fn ? fn(r.original) : r.getValue(c.id)) as string | number | boolean | Date | null | undefined
+}
+
 const escape = (v: unknown) => {
-  const s = v === null || v === undefined ? "" : v instanceof Date ? v.toISOString() : String(v)
+  const s = v === null || v === undefined ? "" : v instanceof Date ? formatDate(v) : String(v)
   return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
@@ -15,7 +23,7 @@ const escape = (v: unknown) => {
 export function downloadCsv<TData>(fileName: string, columns: Column<TData, unknown>[], rows: Row<TData>[]) {
   const header = columns.map((c) => escape(columnLabel(c)))
   const body = rows.map((r) =>
-    columns.map((c) => escape(c.columnDef.meta?.exportValue ? c.columnDef.meta.exportValue(r.original) : r.getValue(c.id))).join(",")
+    columns.map((c) => escape(cellValue(c, r))).join(",")
   )
   const blob = new Blob(["﻿" + [header.join(","), ...body].join("\r\n")], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
