@@ -1,4 +1,4 @@
-# Aura UI (v1.1)
+# Aura UI (v1.2)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -19,11 +19,11 @@ Thang 0–3, ship-quality ≥ 2,6. Chi tiết từng vòng trong `evals/results/
 ```
 .claude-plugin/              plugin.json, marketplace.json
 hooks/hooks.json             hook cho agent: SessionStart, PostToolUse (Write|Edit, Bash), Stop
-skills/                      8 skill, gọi bằng /aura-ui:<tên>
+skills/                      7 skill, gọi bằng /aura-ui:<tên>
   build/                     dựng/sửa màn hình theo luật thiết kế (tự kích hoạt khi làm UI)
   init/  scan/               cài aura vào repo · quét lại, trạng thái, baseline
   find/  check/  describe/   tìm component · kiểm tra & sửa lỗi · viết mô tả component
-  new-app/  add-block/       tạo app từ starter · cài add-on (editor, lightbox)
+  new-app/                   tạo app từ starter (add-on editor/lightbox: aura find in sẵn lệnh cài khi cần)
 manager/                     Aura component manager: aura.mjs (init, find, show, usage, tokens, check,
                              describe, baseline, scan, status, hook)
 template/                    starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component, Base UI),
@@ -81,5 +81,6 @@ Hook (khai báo trong `hooks/hooks.json`, chỉ hoạt động ở repo có `.au
   khi đã có linh kiện, token màu không tồn tại, thư viện UI lạ. Lỗi có sẵn từ trước (baseline) không chặn.
 - **PostToolUse (Bash):** phát hiện file component bị xoá/di chuyển, cập nhật registry.
 - **Stop:** không cho agent kết thúc khi còn lỗi hoặc component mới chưa có mô tả (`aura describe`).
+- **Hook gắn với skill** (`build`, `find`, chạy một lần): ở repo giao diện chưa có `.aura/`, nhắc agent đề xuất `/aura-ui:init` với người dùng.
 
 Commit `.aura/` (registry, profile, rules, baseline, bin) để cả team và CI dùng chung; `.aura/cache` được bỏ qua.

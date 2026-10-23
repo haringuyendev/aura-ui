@@ -1,6 +1,13 @@
 ---
 name: find
 description: Find which of the project's own components to use for a UI need (an input, a dialog, a date range, a price table, a media gallery…), with import path, props, variants and where it is already used, plus the design tokens to style it - by asking the Aura registry instead of scanning folders. Use whenever you are about to build or change UI in a repo with .aura/, before writing a new component, and when the user asks which component, prop, variant or color token to use.
+hooks:
+  PostToolUse:
+    - matcher: "Write|Edit"
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" hook skill-nudge
+          once: true
 ---
 
 # Aura find
@@ -20,16 +27,17 @@ How to use the answers:
    what you need (e.g. a form field that wraps `Input`).
 2. Before writing JSX, `show` the component for its props and variants, and open one file from "used in" to
    copy the real usage pattern.
-3. **Nothing fits?** The output suggests aura reference blocks. Build the missing piece in the project's
-   style from its primitives (Radix-based shadcn uses `asChild`, Base UI uses `render`), or, in an app made
-   from the aura starter, install a heavy block with the `aura-ui:add-block` skill. Then describe the new
-   component (`aura-ui:describe`).
+3. **Nothing fits?** The output lists aura references under "Not in the project?":
+   - In an app made from the aura starter, an **add-on** line shows its install command (rich text editor,
+     PDF/Word/Excel/image viewer). Run it from the app root, then use the block (`aura show <name>`).
+   - Otherwise build the missing piece in the project's style from its primitives (Radix-based shadcn uses
+     `asChild`, Base UI uses `render`).
+   Then describe the new component (`aura-ui:describe`).
 4. **Colors** come from `tokens` only. If a status token is "background/tint only", use the text token it
    names, or a tint (`bg-<token>/15`) with `text-foreground`.
 
 Don't scan `components/` folders with grep/glob to choose components; the registry is kept in sync by the
 hooks and is faster. Read component files only to understand one you already picked.
 
-No `.aura/` in the repo? Run the `aura-ui:init` skill first. In a plain aura starter reference (no app),
-`node AURA/scripts/catalog.mjs find <words>` searches the starter catalog (`AURA` = plugin folder,
-`<base>/../..`).
+No `.aura/` in the repo? Run the `aura-ui:init` skill first. To browse what the aura starter itself offers,
+`node "${CLAUDE_PLUGIN_ROOT}/scripts/catalog.mjs" find <words>` searches its catalog.

@@ -5,12 +5,12 @@ description: Create a new web app from the aura starter - React + Vite + TypeScr
 
 # Aura new app
 
-`AURA` = the aura-ui plugin folder, two levels above this skill's real directory (`<base>/../..`; outside Claude Code, the folder where the aura-ui repo is cloned).
+`${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder (Claude Code fills it in; with other agents, use the folder where the aura-ui repo is cloned).
 
 ```bash
-bash "AURA/scripts/new-app.sh" <target-dir> [app-name]
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/new-app.sh" <target-dir> [app-name]
 ```
-It copies `AURA/template`, runs `npm install` (needs network or an npm mirror; versions are pinned by the
+It copies `${CLAUDE_PLUGIN_ROOT}/template`, runs `npm install` (needs network or an npm mirror; versions are pinned by the
 lockfile) and `aura init`. The target must be empty or missing.
 
 What the app has:
@@ -24,5 +24,6 @@ What the app has:
 - `.aura/`: registry pre-described from the catalog, so `aura find` works in Vietnamese immediately.
 
 Then build the first screen with the `aura-ui:build` skill (brief first: surface type, v1 features, visual
-direction; then tokens, variants, screens). For a rich text editor or a PDF/Word/Excel viewer, use the
-`aura-ui:add-block` skill. Run `npm run dev` and give the user the URL.
+direction; then tokens, variants, screens). Two heavy add-ons are available on demand: a rich text editor
+and a PDF/Word/Excel/image viewer; `aura find` prints their install command when a need matches. Run
+`npm run dev` and give the user the URL.
