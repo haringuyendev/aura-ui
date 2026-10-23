@@ -14,7 +14,7 @@ the same colors, radius, spacing and type.
 React + Vite + TypeScript + Tailwind v4 + shadcn/ui (Base UI primitives) + lucide icons +
 react-router + TanStack Query. Do not switch frameworks or add another UI library.
 
-**New project:** copy the starter, then work inside it. The script lives in this skill's folder
+**New project:** copy the starter (it also runs `aura init`), then work inside it. The script lives in this skill's folder
 (the folder containing this SKILL.md); in Claude Code that is `${CLAUDE_PLUGIN_ROOT}/skills/aura-ui`.
 ```bash
 bash <this-skill-folder>/scripts/new-app.sh <target-dir>
@@ -30,7 +30,9 @@ routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
 **Existing project:** don't use the starter. Follow "Working in an existing project" below first.
 
 ## Finding the right component
-`catalog/components.json` describes every starter component (`kind`: primitive, block or util): what
+In any app with `.aura/` (all apps made from the starter), use `aura find` (next section): it searches the
+app's real components, pre-described from the catalog. `catalog/components.json` is the reference of what
+the starter and its add-ons offer; it describes every starter component (`kind`: primitive, block or util): what
 it is for, when to use and avoid it, exports, variants and a one-line example. Query it instead of reading component files:
 ```bash
 node <this-skill-folder>/scripts/catalog.mjs find chọn khoảng ngày   # best matches (vi/en, accents optional)
@@ -49,37 +51,44 @@ Categories: layout, navigation, data, form, action, overlay, feedback, chat, uti
 part of a screen, `find` the component for it, and prefer a block over re-assembling its primitives; open the component file only when the catalog example is
 not enough to use it correctly.
 
-## Working in an existing project
-When the repo already has an app, its design system wins. Before the brief:
-1. **Profile it** (read-only; writes `.aura/` in the repo, which can be git-ignored or deleted):
-   ```bash
-   node <this-skill-folder>/scripts/scan-project.mjs <repo>
-   ```
-   It prints the stack, UI library, token file(s) and dark-mode selector, color tokens, fonts, status
-   and chart tokens (with contrast), primitives and existing sections, utilities, conventions, and
-   findings (undefined tokens, status colors unsafe as text, raw colors). Put a 3–5 line summary of it
-   in the brief and read the project's AGENTS.md/CLAUDE.md if listed.
-2. **Find components in the project first**: `catalog.mjs find <words> --project <repo>/.aura`. It lists
-   the project's own components (by usage), then aura entries as reference only.
+## Aura component manager (every project, new or existing)
+Aura keeps a registry of the project's own components, tokens and conventions in `.aura/`, kept in sync
+by agent hooks (session start, after each Write/Edit/Bash, before stopping). **Ask it instead of scanning
+component folders.**
+- Not set up yet (no `.aura/` in the repo): `node <this-skill-folder>/manager/aura.mjs init` in the repo
+  root. It scans the repo, writes `.aura/` (registry, profile, rules, baseline, a vendored `bin/`) and adds
+  `aura` / `aura:check` npm scripts. Tell the user to commit `.aura/` (the cache is git-ignored).
+- Then, from the repo root:
+  ```bash
+  node .aura/bin/aura.mjs find "ô nhập liệu"     # the project's components for a need (vi/en)
+  node .aura/bin/aura.mjs show Button            # props, variants, description, where it is used
+  node .aura/bin/aura.mjs tokens                 # colors, fonts, status tokens (and which are text-safe)
+  node .aura/bin/aura.mjs check <file>           # rules; the hooks run this for you
+  node .aura/bin/aura.mjs describe <Name> --summary "…" --use "a; b" --avoid "…" --keywords "vi, en"
+  ```
+- The hooks **block** new violations: a component that duplicates an existing one, raw `<button>/<input>/…`
+  when the project has that primitive, color classes for tokens that don't exist, imports from a UI library
+  the project doesn't use. Read the message and fix it the way it says. Findings that existed before aura
+  was added (the baseline) don't block; fix them only if your change is about them.
+- After creating a component, describe it with `aura describe` (the stop hook asks for it), so the next
+  agent can find it.
 
-Then the hard rules apply with these substitutions:
-- **Rule 8 becomes "compose only from the project's components"** (`components/ui`, existing sections,
-  shared components). Never add a second UI library or copy starter files in. If a needed component is
-  missing, add it the project's way (e.g. `npx shadcn add <name>` with the project's own
-  `components.json`), or port an aura block by rewriting it for the project's primitives: Radix-based
-  shadcn uses `asChild`, the starter's Base UI uses `render`; import `cn` from the project's path.
-- **Tokens are the project's.** Use its token names and its color format. If status, info or chart
-  tokens are missing or fail contrast as text (the profile says "bg only"), add or fix them in the
-  project's token file, following its `:root` / dark-selector / `@theme` pattern, and say so in the
-  summary. Don't restyle the brand.
-- **Follow its conventions**: file layout, CMS blocks (e.g. Payload: a new section is a new block with
-  config + component, registered where blocks are rendered), routing, data fetching, i18n, formatting
-  helpers that already exist.
-- Keep the design rules of this skill (surface type, data color, spacing and layout, vi-VN, the
-  390/768/1440 check). Showcase sites (marketing, real estate, landing) may use the project's existing
-  gradients and motion; tools stay restrained.
-- Report pre-existing findings (undefined tokens, raw colors) to the user; fix only what your change
-  touches.
+## Working in an existing project
+The project's design system wins over the starter:
+- **Rule 8 becomes "compose only from the project's components"** (what `aura find` returns). Never add a
+  second UI library or copy starter files in. If something is missing, add it the project's way (e.g.
+  `npx shadcn add <name>` with its `components.json`), or port an aura block by rewriting it for the
+  project's primitives: Radix-based shadcn uses `asChild`, the starter's Base UI uses `render`; import
+  `cn` from the project's path.
+- **Tokens are the project's** (`aura tokens`). If a status, info or chart token is missing or not
+  text-safe, add it in the project's token file following its `:root` / dark-selector / `@theme` pattern
+  and say so. Don't restyle the brand.
+- **Follow its conventions** (listed in the session-start summary): file layout, CMS blocks (e.g. Payload:
+  a new section is a new block with config + component, registered where blocks are rendered), routing,
+  data fetching, i18n, existing formatting helpers.
+- Keep this skill's design rules (surface type, data color, spacing and layout, vi-VN, the 390/768/1440
+  check). Showcase sites may use the project's existing gradients and motion; tools stay restrained.
+- Don't refactor or move existing components unless the task needs it; if you do, say what changed.
 
 ## Hard rules
 1. **The design system is everything.** All colors, gradients, shadows, radii, fonts and transitions

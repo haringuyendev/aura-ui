@@ -18,4 +18,5 @@ sed -i.bak "s/\"name\": \"aura-starter\"/\"name\": \"$name\"/" "$target/package.
 
 cd "$target"
 npm install --no-audit --no-fund
+node "$(dirname "$template")/manager/aura.mjs" init >/dev/null && echo "Aura component manager initialised (.aura/)"
 echo "Ready: cd $target && npm run dev"
