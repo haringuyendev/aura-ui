@@ -2,14 +2,14 @@
   "description": "Aura component manager: keeps .aura/registry.json in sync and checks component edits. Silent in repos without .aura/.",
   "hooks": {
     "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/aura-ui/manager/aura.mjs\" hook session-start", "timeout": 30 }] }
+      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs\" hook session-start", "timeout": 30 }] }
     ],
     "PostToolUse": [
-      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/aura-ui/manager/aura.mjs\" hook post-edit", "timeout": 30 }] },
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/aura-ui/manager/aura.mjs\" hook post-bash", "timeout": 30 }] }
+      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs\" hook post-edit", "timeout": 30 }] },
+      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs\" hook post-bash", "timeout": 30 }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/aura-ui/manager/aura.mjs\" hook stop", "timeout": 30 }] }
+      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs\" hook stop", "timeout": 30 }] }
     ]
   }
 }

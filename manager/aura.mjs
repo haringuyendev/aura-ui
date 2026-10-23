@@ -49,6 +49,7 @@ function summary(ctx, profile, registry) {
     `Components: ${p.components.primitives.length} primitives in ${p.components.uiDir ?? '?'}, ${p.components.components} shared, ${p.components.sections.length} sections. Most used: ${top}`,
     p.conventions.length ? `Conventions: ${p.conventions.join(' · ')}` : '',
     `Rules: reuse existing components (duplicates are blocked), only defined color tokens, no second UI library; after creating a component, describe it with "aura describe".`,
+    `Skills: aura-ui:find (pick components) · aura-ui:check (when a hook blocks) · aura-ui:describe · aura-ui:build (design rules).`,
   ].filter(Boolean).join('\n')
 }
 

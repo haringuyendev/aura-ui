@@ -7,8 +7,8 @@ Goal: prove the skill changes outcomes, not just adds tokens. Each case is run *
 Arms run on the same model with the same brief, in fresh agent sessions:
 - **A (no skill):** a copy of `evals/baseline/` (stock Vite + shadcn with 17 components, neutral theme);
   `npm install`, render from `src/App.tsx`. The agent gets the brief only.
-- **C (aura-ui):** `bash skills/aura-ui/scripts/new-app.sh <dir>`; the agent is told to read
-  `skills/aura-ui/SKILL.md` and may use `evals/tools/shot.mjs` to look at its page.
+- **C (aura-ui):** `bash scripts/new-app.sh <dir>`; the agent is told to read
+  `skills/build/SKILL.md` and may use `evals/tools/shot.mjs` to look at its page.
 
 Then for each build:
 1. `npm run build && npx vite preview --port <p>`.
