@@ -1,12 +1,18 @@
 ---
 name: build
 description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a 390/768/1440 self-check. Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
+hooks:
+  PostToolUse:
+    - matcher: "Write|Edit"
+      hooks:
+        - type: command
+          command: node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" hook skill-nudge
+          once: true
 ---
 
 # Aura build: design system first, compose from the project's components
 
-**`AURA`** below is the aura-ui plugin folder: two levels above this skill's real directory (outside Claude Code, the folder where the aura-ui repo is cloned)
-(`<base>/../..`), containing `manager/`, `template/`, `catalog/`, `addons/`, `scripts/`, `references/`.
+`${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder (Claude Code fills it in; with other agents, use the folder where the aura-ui repo is cloned).
 
 ## Before building
 1. **New app?** Use the `aura-ui:new-app` skill (starter + `aura init`). Stack: React + Vite + TypeScript +
@@ -16,7 +22,8 @@ description: Build or redesign web apps, screens and dashboards that don't look 
 2. **Existing app without `.aura/`?** Run the `aura-ui:init` skill first (one-time scan).
 3. **Find components with the `aura-ui:find` skill** (`node .aura/bin/aura.mjs find "<need>"`, `show`,
    `tokens`) instead of reading component folders. Prefer a block over re-assembling its primitives.
-   Heavy blocks (rich text editor, PDF/Word/Excel viewer) come from the `aura-ui:add-block` skill.
+   For a rich text editor or a PDF/Word/Excel viewer in a starter app, `aura find` prints the add-on's
+   install command.
 4. Agent hooks check every component edit. If one blocks you, follow the `aura-ui:check` skill. After
    creating a component, describe it (`aura-ui:describe`) so the next agent finds it.
 
@@ -80,7 +87,7 @@ Before writing code, post a short brief in chat (5–10 lines, no more):
 Then implement in this order:
 1. **Design system**: edit `src/index.css` tokens (and add new ones such as `--gradient-primary`,
    `--shadow-elegant`, `--transition-smooth`, registered in `@theme inline`). Install and set the font.
-   See `AURA/references/design-system.md` for the token and variant patterns.
+   See `${CLAUDE_PLUGIN_ROOT}/references/design-system.md` for the token and variant patterns.
 2. **Variants**: add the component variants you are about to use.
 3. **Screens**: small, focused components in their own files (`src/components/<feature>/…`); pages in
    `src/pages/`; routes in `src/App.tsx` above the catch-all. Replace the placeholder `Index.tsx`.
@@ -118,7 +125,7 @@ and everything else quiet:
   the user makes on this screen (on a dashboard, 4–5 KPI cards do; on a record or list screen they
   usually repeat what the list shows). Fields the user rarely needs go to a detail view, not a column.
 
-**Building a dashboard or overview page?** Read `AURA/references/dashboard.md` before the brief.
+**Building a dashboard or overview page?** Read `${CLAUDE_PLUGIN_ROOT}/references/dashboard.md` before the brief.
 
 ## Spacing and layout
 Dense where the user scans many similar items, airy where they read. Cramped is not "efficient".

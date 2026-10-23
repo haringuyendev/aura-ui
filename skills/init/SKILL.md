@@ -5,14 +5,14 @@ description: Set up the Aura component manager in a repository - scan the projec
 
 # Aura init
 
-`AURA` = the aura-ui plugin folder, two levels above this skill's real directory (`<base>/../..`; outside Claude Code, the folder where the aura-ui repo is cloned).
+`${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder (Claude Code fills it in; with other agents, use the folder where the aura-ui repo is cloned).
 
 ## Steps
 1. Go to the repository root (the folder with `package.json`). If `.aura/registry.json` already exists,
    stop: the repo is set up; use the `aura-ui:scan` skill to refresh instead.
 2. Run:
    ```bash
-   node "AURA/manager/aura.mjs" init            # add --no-scripts to leave package.json untouched
+   node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" init            # add --no-scripts to leave package.json untouched
    ```
    It is read-only on source code. It writes:
    - `.aura/registry.json`: every component (primitives in `components/ui`, shared components, sections/

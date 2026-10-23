@@ -10,7 +10,7 @@
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
 //   aura baseline                   accept current findings as existing (hooks then block only new ones)
 //   aura scan                       full rescan (normally not needed: every command refreshes incrementally)
-//   aura hook <session-start|post-edit|post-bash|stop>   called by agent hooks with the event JSON on stdin
+//   aura hook <session-start|post-edit|post-bash|stop|skill-nudge>   called by agent hooks with the event JSON on stdin
 import fs from 'node:fs'
 import path from 'node:path'
 import { execSync } from 'node:child_process'
@@ -126,7 +126,16 @@ async function main() {
     const { results, aura } = findComponents(r.registry, q)
     if (!results.length) console.log(`No component in this project matches "${q}".`)
     for (const { component, why } of results) console.log(formatComponent(component) + (why.length ? `\n  (${why.join(', ')})` : ''))
-    if (aura.length) console.log(`\nNot in the project? Aura reference to build it in this project's style: ${aura.map((a) => `${a.name} (${a.summary.split('.')[0]})`).join('; ')}`)
+    if (aura.length) {
+      // Add-ons install into apps made from the aura starter (Base UI blocks at src/components/blocks); elsewhere they are a reference.
+      const starterApp = r.registry.components.some((c) => c.name === 'data-table' && /components\/blocks\//.test(c.path))
+      const installer = path.join(here, '..', 'scripts', 'add-block.mjs')
+      const addCmd = (name) => `node ${fs.existsSync(installer) ? JSON.stringify(installer) : '"${CLAUDE_PLUGIN_ROOT}/scripts/add-block.mjs"'} ${name} .`
+      const lines = aura.map((a) => a.kind === 'addon' && starterApp
+        ? `${a.name}: aura add-on, install with: ${addCmd((a.install ?? '').match(/add-block\.mjs (\S+)/)?.[1] ?? a.name)}`
+        : `${a.name} (${a.summary.split('.')[0]})${a.kind === 'addon' ? ' [aura add-on for starter apps; port it to this project\'s primitives]' : ''}`)
+      console.log(`\nNot in the project? ${starterApp ? '' : "Aura reference to build it in this project's style: "}\n  ${lines.join('\n  ')}`)
+    }
   } else if (cmd === 'show') {
     const c = byName(positional[0] ?? '')
     console.log(c ? formatComponent(c, { detail: true }) : `Unknown component "${positional[0]}". Try: aura find ${positional[0] ?? ''}`)
@@ -184,11 +193,18 @@ async function hook(event) {
   const input = await readStdin()
   const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd()
   const ctx = createContext(findRepoRoot(root))
+  const emit = (eventName, text) => text && process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: eventName, additionalContext: text.slice(0, 9500) } }))
+  if (event === 'skill-nudge') {
+    // Skill-scoped (once): when an aura skill edits files in a UI repo that isn't managed yet, suggest init.
+    const ui = ['react', 'next', 'vue', 'svelte', '@angular/core', 'solid-js', 'preact'].some((d) => ctx.deps[d])
+    if (isInitialised(ctx) || !ui) return
+    const cli = process.env.CLAUDE_PLUGIN_ROOT ? path.join(process.env.CLAUDE_PLUGIN_ROOT, 'manager', 'aura.mjs') : fileURLToPath(import.meta.url)
+    return emit('PostToolUse', `Aura: this repo (${path.basename(ctx.repo)}) has no .aura/ registry, so components aren't indexed and edits aren't checked (duplicates, raw primitives, undefined tokens). Offer the user the aura-ui:init skill (node "${cli}" init): one read-only scan that writes .aura/ and enables the checks. Don't run it without asking.`)
+  }
   if (!isInitialised(ctx)) return // not an aura-managed repo: stay silent
   const sessionFile = path.join(ctx.auraDir, 'cache', `session-${String(input.session_id ?? 'default').replace(/[^\w-]/g, '')}.json`)
   const session = (() => { try { return JSON.parse(fs.readFileSync(sessionFile, 'utf8')) } catch { return { touched: [], added: [] } } })()
   const saveSession = () => { fs.mkdirSync(path.dirname(sessionFile), { recursive: true }); fs.writeFileSync(sessionFile, JSON.stringify(session)) }
-  const emit = (eventName, text) => text && process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: eventName, additionalContext: text.slice(0, 9500) } }))
 
   if (event === 'session-start') {
     const r = refresh(ctx)
