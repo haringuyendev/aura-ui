@@ -1533,7 +1533,11 @@
       "dropdown",
       "picker",
       "chọn",
-      "danh sách thả xuống"
+      "danh sách thả xuống",
+      "filter",
+      "lọc",
+      "lọc theo",
+      "bộ lọc"
     ],
     "example": "<Select value={v} onValueChange={setV}><SelectTrigger><SelectValue placeholder=\"Chi nhánh\" /></SelectTrigger><SelectContent><SelectItem value=\"q1\">Quận 1</SelectItem></SelectContent></Select>",
     "related": [
@@ -1691,7 +1695,9 @@
       "button group select",
       "period selector",
       "chọn kỳ",
-      "chế độ xem"
+      "chế độ xem",
+      "filter",
+      "lọc nhanh"
     ],
     "example": "<ToggleGroup value={[period]} onValueChange={(v) => setPeriod(v[0])}><ToggleGroupItem value=\"7d\">7 ngày</ToggleGroupItem><ToggleGroupItem value=\"30d\">30 ngày</ToggleGroupItem></ToggleGroup>",
     "related": [
@@ -2272,7 +2278,7 @@
       "saved views of a list",
       "settings pages"
     ],
-    "avoid_when": "Sequential steps (use a stepper) or more than ~6 options (use select).",
+    "avoid_when": "Sequential steps (use a stepper) or more than ~6 options (use select). On mobile, let a long TabsList scroll: <Tabs className=\"max-w-full overflow-x-auto\"><TabsList className=\"w-max\">.",
     "keywords": [
       "tab",
       "views",
@@ -2492,7 +2498,12 @@
       "side panel",
       "slide over",
       "ngăn kéo",
-      "bảng bên"
+      "bảng bên",
+      "detail panel",
+      "record detail",
+      "chi tiết",
+      "xem chi tiết",
+      "panel bên phải"
     ],
     "example": "<Sheet><SheetTrigger render={<Button>Chi tiết</Button>} /><SheetContent><SheetHeader><SheetTitle>Đơn #1024</SheetTitle></SheetHeader>…</SheetContent></Sheet>",
     "related": [
