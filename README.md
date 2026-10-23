@@ -1,4 +1,4 @@
-# Aura UI (v0.6)
+# Aura UI (v0.7)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -27,10 +27,12 @@ skills/aura-ui/
                              Base UI) + react-router + TanStack Query/Table + react-hook-form + zod;
                              src/components/blocks/ (page-header, stat, data-table, description-list,
                              form, number-input, date-range-picker, file-upload, stepper), src/lib/format.ts
-  catalog/components.json    danh mục 73 mục (63 linh kiện shadcn, 9 khối ghép sẵn, format): tác dụng,
+  catalog/components.json    danh mục 76 mục (63 linh kiện shadcn, 9 khối, 3 add-on, format): tác dụng,
                              khi dùng/không dùng, export, variant, ví dụ
   scripts/catalog.mjs        tra danh mục: find <từ khoá> | show <tên> | list [nhóm] | sync
   scripts/new-app.sh         copy starter sang thư mục mới và cài package
+  addons/                    khối nặng cài khi cần: rich-text-editor (Tiptap), file-lightbox (PDF/Word/Excel/ảnh)
+  scripts/add-block.mjs      cài add-on vào app: chép file, npm install, chép asset (font pdf.js)
 evals/
   README.md                  quy trình A/B và 8 đề (bảng, form, dashboard)
   baseline/                  project gốc cho nhánh "không skill"

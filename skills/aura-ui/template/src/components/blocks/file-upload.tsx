@@ -27,12 +27,14 @@ type FileUploadProps = {
   disabled?: boolean
   className?: string
   id?: string
+  /** Called with the file index when its name is clicked, e.g. to open <FileLightbox>. */
+  onPreview?: (index: number) => void
 }
 
 const sizeLabel = (bytes: number) => (bytes >= 1e6 ? `${formatNumber(bytes / 1e6)} MB` : `${formatNumber(Math.max(1, bytes / 1e3), 0)} KB`)
 
 /** Drag-and-drop or click-to-pick file area with the chosen files listed as attachments. */
-function FileUpload({ value, onChange, accept, multiple = true, maxSize, hint, disabled, className, id }: FileUploadProps) {
+function FileUpload({ value, onChange, accept, multiple = true, maxSize, hint, disabled, className, id, onPreview }: FileUploadProps) {
   const inputId = React.useId()
   const [dragging, setDragging] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -96,7 +98,15 @@ function FileUpload({ value, onChange, accept, multiple = true, maxSize, hint, d
                 <FileIcon />
               </AttachmentMedia>
               <AttachmentContent>
-                <AttachmentTitle>{file.name}</AttachmentTitle>
+                <AttachmentTitle>
+                  {onPreview ? (
+                    <button type="button" onClick={() => onPreview(i)} className="rounded-sm text-left hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                      {file.name}
+                    </button>
+                  ) : (
+                    file.name
+                  )}
+                </AttachmentTitle>
                 <AttachmentDescription>{sizeLabel(file.size)}</AttachmentDescription>
               </AttachmentContent>
               <AttachmentActions>

@@ -727,6 +727,36 @@
     "kind": "primitive"
   },
   {
+    "name": "rich-text-content",
+    "category": "data",
+    "kind": "addon",
+    "summary": "Read-only rendering of rich text HTML, sanitized with DOMPurify, with the same typography as the editor.",
+    "use_when": [
+      "showing saved notes, orders or descriptions written with RichTextEditor or coming from another system"
+    ],
+    "avoid_when": "Plain text; render it directly.",
+    "keywords": [
+      "render html",
+      "rich text view",
+      "sanitize",
+      "hiển thị nội dung",
+      "xem ghi chú",
+      "nội dung định dạng"
+    ],
+    "example": "<RichTextContent html={order.noteHtml} />",
+    "related": [
+      "rich-text-editor"
+    ],
+    "import": "@/components/blocks/rich-text-content",
+    "install": "node <this-skill-folder>/scripts/add-block.mjs rich-text-editor <app-dir>",
+    "exports": [
+      "RichTextContent",
+      "richTextStyles"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
     "name": "stat",
     "category": "data",
     "kind": "block",
@@ -1520,6 +1550,41 @@
       "@base-ui/react/radio-group"
     ],
     "kind": "primitive"
+  },
+  {
+    "name": "rich-text-editor",
+    "category": "form",
+    "kind": "addon",
+    "summary": "Rich text editor (Tiptap) with a token-styled toolbar: headings, bold/italic/underline/strike, lists, quote, link, undo; 'full' adds alignment and tables; optional character limit. Value is HTML; works inside FormField.",
+    "use_when": [
+      "clinical notes, orders, descriptions, emails, announcements where formatting matters"
+    ],
+    "avoid_when": "Short plain fields (use input/textarea). Load lazily (React.lazy) if it is not on the first screen: Tiptap is large.",
+    "keywords": [
+      "rich text",
+      "wysiwyg",
+      "editor",
+      "tiptap",
+      "formatting",
+      "soạn thảo",
+      "trình soạn thảo",
+      "văn bản định dạng",
+      "ghi chú",
+      "in đậm"
+    ],
+    "example": "<FormField name=\"note\" label=\"Nội dung\">{({ field, id, invalid }) => <RichTextEditor id={id} aria-invalid={invalid} value={field.value} onChange={field.onChange} placeholder=\"Nhập y lệnh…\" toolbar=\"full\" maxLength={2000} />}</FormField>",
+    "related": [
+      "rich-text-content",
+      "form",
+      "textarea"
+    ],
+    "import": "@/components/blocks/rich-text-editor",
+    "install": "node <this-skill-folder>/scripts/add-block.mjs rich-text-editor <app-dir>",
+    "exports": [
+      "RichTextEditor"
+    ],
+    "variants": {},
+    "deps": []
   },
   {
     "name": "select",
@@ -2422,6 +2487,46 @@
       "@base-ui/react/drawer"
     ],
     "kind": "primitive"
+  },
+  {
+    "name": "file-lightbox",
+    "category": "overlay",
+    "kind": "addon",
+    "summary": "Full-screen file viewer: images (zoom), PDF (react-pdf, lazy pages, page counter), Word .docx (docx-preview), Excel/CSV/ODS (SheetJS, sheet tabs, first 1000 rows), text; paging between files, keyboard shortcuts and download. Each viewer is lazy-loaded.",
+    "use_when": [
+      "opening attachments of a record (results, consent forms, invoices, spreadsheets)",
+      "previewing files picked in file-upload (onPreview)"
+    ],
+    "avoid_when": "Editing documents; pptx and other formats show a download fallback. For print-exact Word/Excel, convert to PDF on a server.",
+    "keywords": [
+      "lightbox",
+      "file viewer",
+      "document viewer",
+      "preview",
+      "pdf viewer",
+      "docx",
+      "word",
+      "excel",
+      "xlsx",
+      "xem tệp",
+      "xem trước",
+      "xem pdf",
+      "đọc file",
+      "tệp đính kèm"
+    ],
+    "example": "<FileLightbox files={[{ name: \"ket-qua.pdf\", url: \"/files/ket-qua.pdf\" }]} index={openIndex} onIndexChange={setOpenIndex} />  // with uploads: files={uploads.map((f) => ({ name: f.name, file: f }))}",
+    "related": [
+      "file-upload",
+      "attachment",
+      "dialog"
+    ],
+    "import": "@/components/blocks/file-lightbox",
+    "install": "node <this-skill-folder>/scripts/add-block.mjs file-lightbox <app-dir>",
+    "exports": [
+      "FileLightbox"
+    ],
+    "variants": {},
+    "deps": []
   },
   {
     "name": "hover-card",
