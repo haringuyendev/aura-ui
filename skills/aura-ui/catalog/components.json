@@ -511,26 +511,42 @@
     "name": "data-table",
     "category": "data",
     "kind": "block",
-    "summary": "Full table on TanStack Table: sortable headers, search box, pagination, row click, no-results state, and a card layout on mobile.",
+    "summary": "Full table on TanStack Table: sortable headers, search, multi-select column filters with counts, user column show/hide (remembered), row selection with a bulk-action bar, CSV export, pagination with page size, loading skeleton, mobile cards, and a server mode for API data.",
     "use_when": [
-      "lists of records users search, sort and open (orders, patients, staff, tickets)"
+      "lists of records users search, filter, sort, select and open (orders, patients, staff, tickets)",
+      "API-backed lists with server-side paging/sorting/filtering (manual mode)"
     ],
     "avoid_when": "Tiny static tables (< 10 rows, no sorting); use table directly.",
     "keywords": [
+      "bulk actions",
+      "bảng dữ liệu",
+      "chọn nhiều dòng",
+      "column visibility",
+      "danh sách",
       "data table",
       "datatable",
-      "sortable table",
-      "list",
+      "export csv",
+      "faceted filter",
       "grid",
-      "tanstack",
+      "hide columns",
+      "hiện cột",
+      "list",
+      "lọc theo cột",
       "pagination",
-      "bảng dữ liệu",
-      "danh sách",
+      "phân trang",
+      "phân trang server",
+      "row selection",
+      "server side",
+      "sortable table",
       "sắp xếp",
+      "tanstack",
+      "thao tác hàng loạt",
       "tìm kiếm",
-      "phân trang"
+      "xuất csv",
+      "xuất excel",
+      "ẩn cột"
     ],
-    "example": "<DataTable columns={columns} data={orders} searchPlaceholder=\"Tìm mã đơn, khách, SĐT\" onRowClick={openOrder} renderMobileRow={(o) => <OrderRow order={o} />} />  // column meta: { align: \"right\", className: \"w-32\" }",
+    "example": "<DataTable columns={columns} data={orders} getRowId={(o) => o.id} searchPlaceholder=\"Tìm mã đơn, khách\" filters={[{ column: \"status\", title: \"Trạng thái\", options: [{ value: \"late\", label: \"Giao trễ\" }] }]} columnToggle storageKey=\"orders\" selectable bulkActions={(rows, clear) => <Button size=\"sm\" onClick={() => { approve(rows); clear() }}>Duyệt</Button>} exportFileName=\"don-hang\" onRowClick={openOrder} renderMobileRow={(o) => <OrderRow order={o} />} />  // server: manual rowCount={total} loading={isFetching} state={{ sorting, pagination, columnFilters, globalFilter }} + on…Change handlers. Column meta: { align, className, label, hideable: false, exportValue }",
     "related": [
       "table",
       "pagination",
@@ -540,7 +556,9 @@
     "import": "@/components/blocks/data-table",
     "exports": [
       "DataTable",
-      "ColumnDef"
+      "ColumnDef",
+      "DataTableFilter",
+      "FacetOption"
     ],
     "variants": {},
     "deps": []
