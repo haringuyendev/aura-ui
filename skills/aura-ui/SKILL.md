@@ -26,6 +26,18 @@ routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
 
 **Existing project:** keep its stack. Apply the design-system rules below to whatever it uses.
 
+## Finding the right component
+`catalog/components.json` describes every starter component: what it is for, when to use and avoid
+it, exports, variants and a one-line example. Query it instead of reading component files:
+```bash
+node <this-skill-folder>/scripts/catalog.mjs find chọn khoảng ngày   # best matches (vi/en, accents optional)
+node <this-skill-folder>/scripts/catalog.mjs show calendar popover   # full entries: exports, variants, example
+node <this-skill-folder>/scripts/catalog.mjs list form               # all components in a category
+```
+Categories: layout, navigation, data, form, action, overlay, feedback, chat. Before building any part
+of a screen, `find` the component for it; open the component file only when the catalog example is
+not enough to use it correctly.
+
 ## Hard rules
 1. **The design system is everything.** All colors, gradients, shadows, radii, fonts and transitions
    are tokens in `src/index.css` (`:root`, `.dark`, `@theme inline`). Components only use tokens:

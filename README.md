@@ -1,4 +1,4 @@
-# Aura UI (v0.4)
+# Aura UI (v0.5)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -25,6 +25,8 @@ skills/aura-ui/
   references/dashboard.md    bố cục dải, KPI, khung "Cần xử lý", biểu đồ, danh sách
   template/                  starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component,
                              Base UI) + react-router + TanStack Query; token màu biểu đồ và trạng thái
+  catalog/components.json    danh mục 63 component: tác dụng, khi dùng/không dùng, export, variant, ví dụ
+  scripts/catalog.mjs        tra danh mục: find <từ khoá> | show <tên> | list [nhóm] | sync
   scripts/new-app.sh         copy starter sang thư mục mới và cài package
 evals/
   README.md                  quy trình A/B và 8 đề (bảng, form, dashboard)
@@ -57,3 +59,10 @@ Tạo app mới từ starter: `bash skills/aura-ui/scripts/new-app.sh <thư-mụ
 Màu, font, bo góc, shadow, bảng màu biểu đồ nằm trong `src/index.css` của app. Vì màn hình chỉ dùng
 token và component của template, sửa file này là cả app đổi theo (đã thử trên dashboard phòng khám:
 11 dòng token, không sửa code màn hình). Hình dáng component sửa trong `src/components/ui/`.
+
+## Thêm hoặc sửa component
+1. Thêm file vào `skills/aura-ui/template/src/components/ui/` (ví dụ `npx shadcn add <tên>` trong template).
+2. Thêm một mục vào `skills/aura-ui/catalog/components.json` (name, category, summary, use_when,
+   avoid_when, keywords có cả tiếng Việt, example, related).
+3. Chạy `node skills/aura-ui/scripts/catalog.mjs sync`: tự cập nhật exports/variants từ code, báo mục
+   còn thiếu hoặc thừa.

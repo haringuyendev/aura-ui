@@ -1,0 +1,2167 @@
+[
+  {
+    "name": "button",
+    "category": "action",
+    "summary": "Primary, secondary, outline, ghost, destructive and link buttons in several sizes.",
+    "use_when": [
+      "every action"
+    ],
+    "avoid_when": "Navigation that is really a link; use link variant or <a>.",
+    "keywords": [
+      "button",
+      "cta",
+      "action",
+      "nút",
+      "hành động"
+    ],
+    "example": "<Button>Lưu</Button> <Button variant=\"outline\" size=\"sm\">Huỷ</Button>",
+    "related": [
+      "button-group"
+    ],
+    "import": "@/components/ui/button",
+    "exports": [
+      "Button",
+      "buttonVariants"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "outline",
+        "secondary",
+        "ghost",
+        "destructive",
+        "link"
+      ],
+      "size": [
+        "default",
+        "xs",
+        "sm",
+        "lg",
+        "icon",
+        "icon-xs",
+        "icon-sm",
+        "icon-lg"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/button"
+    ]
+  },
+  {
+    "name": "button-group",
+    "category": "action",
+    "summary": "Visually joined buttons or button + text.",
+    "use_when": [
+      "split buttons, pagination-like controls, grouped actions"
+    ],
+    "avoid_when": "Unrelated actions.",
+    "keywords": [
+      "split button",
+      "grouped buttons",
+      "nhóm nút"
+    ],
+    "example": "<ButtonGroup><Button variant=\"outline\">Xuất</Button><Button variant=\"outline\" size=\"icon\"><ChevronDownIcon /></Button></ButtonGroup>",
+    "related": [],
+    "import": "@/components/ui/button-group",
+    "exports": [
+      "ButtonGroup",
+      "ButtonGroupSeparator",
+      "ButtonGroupText",
+      "buttonGroupVariants"
+    ],
+    "variants": {
+      "orientation": [
+        "horizontal",
+        "vertical"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "context-menu",
+    "category": "action",
+    "summary": "Right-click menu.",
+    "use_when": [
+      "power-user tools (files, canvas)"
+    ],
+    "avoid_when": "Only path to an action; also expose it visibly.",
+    "keywords": [
+      "right click",
+      "menu chuột phải"
+    ],
+    "example": "<ContextMenu><ContextMenuTrigger>…</ContextMenuTrigger><ContextMenuContent>…</ContextMenuContent></ContextMenu>",
+    "related": [],
+    "import": "@/components/ui/context-menu",
+    "exports": [
+      "ContextMenu",
+      "ContextMenuTrigger",
+      "ContextMenuContent",
+      "ContextMenuItem",
+      "ContextMenuCheckboxItem",
+      "ContextMenuRadioItem",
+      "ContextMenuLabel",
+      "ContextMenuSeparator",
+      "ContextMenuShortcut",
+      "ContextMenuGroup",
+      "ContextMenuPortal",
+      "ContextMenuSub",
+      "ContextMenuSubContent",
+      "ContextMenuSubTrigger",
+      "ContextMenuRadioGroup"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/context-menu"
+    ]
+  },
+  {
+    "name": "dropdown-menu",
+    "category": "action",
+    "summary": "Menu of actions opened from a button.",
+    "use_when": [
+      "row actions (⋯)",
+      "secondary actions",
+      "account menu"
+    ],
+    "avoid_when": "Choosing a form value; use select.",
+    "keywords": [
+      "menu",
+      "more actions",
+      "kebab",
+      "thao tác",
+      "menu ba chấm"
+    ],
+    "example": "<DropdownMenu><DropdownMenuTrigger render={<Button variant=\"ghost\" size=\"icon-sm\" aria-label=\"Thao tác\"><MoreHorizontalIcon /></Button>} /><DropdownMenuContent><DropdownMenuItem>Sửa</DropdownMenuItem></DropdownMenuContent></DropdownMenu>",
+    "related": [
+      "context-menu"
+    ],
+    "import": "@/components/ui/dropdown-menu",
+    "exports": [
+      "DropdownMenu",
+      "DropdownMenuPortal",
+      "DropdownMenuTrigger",
+      "DropdownMenuContent",
+      "DropdownMenuGroup",
+      "DropdownMenuLabel",
+      "DropdownMenuItem",
+      "DropdownMenuCheckboxItem",
+      "DropdownMenuRadioGroup",
+      "DropdownMenuRadioItem",
+      "DropdownMenuSeparator",
+      "DropdownMenuShortcut",
+      "DropdownMenuSub",
+      "DropdownMenuSubTrigger",
+      "DropdownMenuSubContent"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/menu"
+    ]
+  },
+  {
+    "name": "attachment",
+    "category": "chat",
+    "summary": "File/media attachment chip or card with title, description and actions.",
+    "use_when": [
+      "uploaded files in chat, forms or records"
+    ],
+    "avoid_when": "—",
+    "keywords": [
+      "file",
+      "upload",
+      "attachment",
+      "tệp đính kèm",
+      "tải lên"
+    ],
+    "example": "<Attachment><AttachmentMedia>…</AttachmentMedia><AttachmentContent><AttachmentTitle>hoa-don.pdf</AttachmentTitle></AttachmentContent></Attachment>",
+    "related": [],
+    "import": "@/components/ui/attachment",
+    "exports": [
+      "Attachment",
+      "AttachmentGroup",
+      "AttachmentMedia",
+      "AttachmentContent",
+      "AttachmentTitle",
+      "AttachmentDescription",
+      "AttachmentActions",
+      "AttachmentAction",
+      "AttachmentTrigger"
+    ],
+    "variants": {
+      "size": [
+        "default",
+        "sm",
+        "xs"
+      ],
+      "orientation": [
+        "horizontal",
+        "vertical"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "bubble",
+    "category": "chat",
+    "summary": "Chat bubble with variants and reactions.",
+    "use_when": [
+      "message bodies in chat UIs"
+    ],
+    "avoid_when": "Cards or alerts.",
+    "keywords": [
+      "chat bubble",
+      "reaction",
+      "bong bóng chat"
+    ],
+    "example": "<Bubble variant=\"secondary\"><BubbleContent>Xin chào</BubbleContent></Bubble>",
+    "related": [
+      "message"
+    ],
+    "import": "@/components/ui/bubble",
+    "exports": [
+      "BubbleGroup",
+      "Bubble",
+      "BubbleContent",
+      "BubbleReactions"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "secondary",
+        "muted",
+        "tinted",
+        "outline",
+        "ghost",
+        "destructive"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "message",
+    "category": "chat",
+    "summary": "Chat message layout: avatar, header, content, footer; grouped messages.",
+    "use_when": [
+      "chat and assistant UIs, comment threads"
+    ],
+    "avoid_when": "Non-conversational lists.",
+    "keywords": [
+      "chat",
+      "conversation",
+      "comment",
+      "tin nhắn",
+      "trò chuyện",
+      "bình luận"
+    ],
+    "example": "<MessageGroup><Message><MessageAvatar>…</MessageAvatar><MessageContent>…</MessageContent></Message></MessageGroup>",
+    "related": [
+      "bubble",
+      "message-scroller"
+    ],
+    "import": "@/components/ui/message",
+    "exports": [
+      "MessageGroup",
+      "Message",
+      "MessageAvatar",
+      "MessageContent",
+      "MessageFooter",
+      "MessageHeader"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "message-scroller",
+    "category": "chat",
+    "summary": "Scroll container that sticks to the newest message, with jump-to-bottom button.",
+    "use_when": [
+      "chat transcripts, live logs"
+    ],
+    "avoid_when": "Static content.",
+    "keywords": [
+      "chat scroll",
+      "auto scroll",
+      "cuộn tin nhắn"
+    ],
+    "example": "<MessageScrollerProvider><MessageScroller><MessageScrollerViewport><MessageScrollerContent>…</MessageScrollerContent></MessageScrollerViewport><MessageScrollerButton /></MessageScroller></MessageScrollerProvider>",
+    "related": [],
+    "import": "@/components/ui/message-scroller",
+    "exports": [
+      "MessageScrollerProvider",
+      "MessageScroller",
+      "MessageScrollerViewport",
+      "MessageScrollerContent",
+      "MessageScrollerItem",
+      "MessageScrollerButton",
+      "useMessageScroller",
+      "useMessageScrollerScrollable",
+      "useMessageScrollerVisibility"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "avatar",
+    "category": "data",
+    "summary": "User image with initials fallback; groups with overflow count.",
+    "use_when": [
+      "people lists, assignees, comments"
+    ],
+    "avoid_when": "Decoration where the face doesn't help recognition.",
+    "keywords": [
+      "user",
+      "profile picture",
+      "initials",
+      "ảnh đại diện",
+      "người dùng"
+    ],
+    "example": "<Avatar><AvatarImage src={u.photo} alt={u.name} /><AvatarFallback>NA</AvatarFallback></Avatar>",
+    "related": [],
+    "import": "@/components/ui/avatar",
+    "exports": [
+      "Avatar",
+      "AvatarImage",
+      "AvatarFallback",
+      "AvatarGroup",
+      "AvatarGroupCount",
+      "AvatarBadge"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/avatar"
+    ]
+  },
+  {
+    "name": "badge",
+    "category": "data",
+    "summary": "Small label for status, category or count.",
+    "use_when": [
+      "status of a record",
+      "tags",
+      "counts next to tabs/filters"
+    ],
+    "avoid_when": "Marking normal/OK values; leave them unmarked. Add status variants (success/warning) via cva, not classes.",
+    "keywords": [
+      "status",
+      "tag",
+      "label",
+      "chip",
+      "pill",
+      "trạng thái",
+      "nhãn",
+      "thẻ tag"
+    ],
+    "example": "<Badge variant=\"destructive\">Quá hạn</Badge>",
+    "related": [
+      "alert"
+    ],
+    "import": "@/components/ui/badge",
+    "exports": [
+      "Badge",
+      "badgeVariants"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "secondary",
+        "destructive",
+        "outline",
+        "ghost",
+        "link"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "carousel",
+    "category": "data",
+    "summary": "Swipeable horizontal slides.",
+    "use_when": [
+      "image galleries, testimonials on landing pages"
+    ],
+    "avoid_when": "Hiding important content in back-office screens.",
+    "keywords": [
+      "slider",
+      "gallery",
+      "slideshow",
+      "băng chuyền",
+      "trình chiếu"
+    ],
+    "example": "<Carousel><CarouselContent><CarouselItem>…</CarouselItem></CarouselContent><CarouselPrevious /><CarouselNext /></Carousel>",
+    "related": [],
+    "import": "@/components/ui/carousel",
+    "exports": [
+      "CarouselApi",
+      "Carousel",
+      "CarouselContent",
+      "CarouselItem",
+      "CarouselPrevious",
+      "CarouselNext",
+      "useCarousel"
+    ],
+    "variants": {},
+    "deps": [
+      "embla-carousel-react"
+    ]
+  },
+  {
+    "name": "chart",
+    "category": "data",
+    "summary": "Recharts wrapper: themed container, tooltip and legend that read chart-1…5 tokens.",
+    "use_when": [
+      "trends over time, comparisons, distributions, sparklines"
+    ],
+    "avoid_when": "Showing one number (use a stat card) or rankings of a few items (use a bar list with progress).",
+    "keywords": [
+      "graph",
+      "line chart",
+      "bar chart",
+      "area",
+      "sparkline",
+      "recharts",
+      "biểu đồ",
+      "đồ thị",
+      "xu hướng"
+    ],
+    "example": "<ChartContainer config={{ visits: { label: \"Lượt khám\", color: \"var(--chart-1)\" } }} className=\"h-64\"><BarChart data={data}><XAxis dataKey=\"hour\" /><Bar dataKey=\"visits\" fill=\"var(--color-visits)\" /><ChartTooltip content={<ChartTooltipContent />} /></BarChart></ChartContainer>",
+    "related": [
+      "card",
+      "progress"
+    ],
+    "import": "@/components/ui/chart",
+    "exports": [
+      "ChartContainer",
+      "ChartTooltip",
+      "ChartTooltipContent",
+      "ChartLegend",
+      "ChartLegendContent",
+      "ChartStyle"
+    ],
+    "variants": {},
+    "deps": [
+      "recharts"
+    ]
+  },
+  {
+    "name": "code-block",
+    "category": "data",
+    "summary": "Syntax-highlighted code with header and copy button.",
+    "use_when": [
+      "API keys/snippets, developer docs, logs"
+    ],
+    "avoid_when": "Non-technical users' screens.",
+    "keywords": [
+      "code",
+      "snippet",
+      "syntax highlight",
+      "copy code",
+      "mã nguồn"
+    ],
+    "example": "<CodeBlock><CodeBlockHeader><CodeBlockTitle>curl</CodeBlockTitle><CodeBlockCopyButton /></CodeBlockHeader><CodeBlockContent>…</CodeBlockContent></CodeBlock>",
+    "related": [],
+    "import": "@/components/ui/code-block",
+    "exports": [
+      "CodeBlock",
+      "CodeBlockHeader",
+      "CodeBlockTitle",
+      "CodeBlockActions",
+      "CodeBlockCopyButton",
+      "CodeBlockContent",
+      "CodeBlockLine",
+      "CodeBlockFooter"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "destructive"
+      ]
+    },
+    "deps": []
+  },
+  {
+    "name": "item",
+    "category": "data",
+    "summary": "Flexible list row: media, title, description, actions; groups with separators.",
+    "use_when": [
+      "lists of people, files, notifications, settings rows",
+      "mobile replacements for table rows",
+      "attention/alert lists"
+    ],
+    "avoid_when": "Tabular data compared across columns on desktop; use table.",
+    "keywords": [
+      "list item",
+      "row",
+      "list",
+      "dòng",
+      "mục",
+      "danh sách"
+    ],
+    "example": "<ItemGroup><Item><ItemMedia><Avatar>…</Avatar></ItemMedia><ItemContent><ItemTitle>Nguyễn An</ItemTitle><ItemDescription>Kế toán</ItemDescription></ItemContent><ItemActions><Button size=\"sm\">Gọi</Button></ItemActions></Item></ItemGroup>",
+    "related": [
+      "table",
+      "card"
+    ],
+    "import": "@/components/ui/item",
+    "exports": [
+      "Item",
+      "ItemMedia",
+      "ItemContent",
+      "ItemActions",
+      "ItemGroup",
+      "ItemSeparator",
+      "ItemTitle",
+      "ItemDescription",
+      "ItemHeader",
+      "ItemFooter"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "outline",
+        "muted"
+      ],
+      "size": [
+        "default",
+        "sm",
+        "xs"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "kbd",
+    "category": "data",
+    "summary": "Keyboard key hint.",
+    "use_when": [
+      "shortcut hints in menus and tooltips"
+    ],
+    "avoid_when": "Anywhere without a real shortcut.",
+    "keywords": [
+      "shortcut",
+      "hotkey",
+      "phím tắt"
+    ],
+    "example": "<Kbd>⌘K</Kbd>",
+    "related": [],
+    "import": "@/components/ui/kbd",
+    "exports": [
+      "Kbd",
+      "KbdGroup"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "marker",
+    "category": "data",
+    "summary": "Small inline marker line with icon/text, optionally as a centered separator or bordered row.",
+    "use_when": [
+      "date separators in feeds ('Hôm nay')",
+      "inline notes between list sections"
+    ],
+    "avoid_when": "Headings; use typography.",
+    "keywords": [
+      "divider label",
+      "date separator",
+      "note",
+      "mốc",
+      "phân cách ngày"
+    ],
+    "example": "<Marker variant=\"separator\"><MarkerContent>Hôm nay</MarkerContent></Marker>",
+    "related": [],
+    "import": "@/components/ui/marker",
+    "exports": [
+      "Marker",
+      "MarkerIcon",
+      "MarkerContent",
+      "markerVariants"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "separator",
+        "border"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "progress",
+    "category": "data",
+    "summary": "Horizontal bar showing a value against a maximum.",
+    "use_when": [
+      "capacity, quota, completion, ranked bar lists"
+    ],
+    "avoid_when": "Unknown-duration loading; use spinner/skeleton.",
+    "keywords": [
+      "progress bar",
+      "capacity",
+      "percentage bar",
+      "thanh tiến độ",
+      "công suất",
+      "tỉ lệ"
+    ],
+    "example": "<Progress value={82} />",
+    "related": [],
+    "import": "@/components/ui/progress",
+    "exports": [
+      "Progress",
+      "ProgressTrack",
+      "ProgressIndicator",
+      "ProgressLabel",
+      "ProgressValue"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/progress"
+    ]
+  },
+  {
+    "name": "table",
+    "category": "data",
+    "summary": "Semantic table primitives (header, rows, cells, footer).",
+    "use_when": [
+      "any list where users compare values across columns",
+      "comparison tables on dashboards"
+    ],
+    "avoid_when": "Fewer than ~3 columns or mobile-first lists; use item list or cards below md.",
+    "keywords": [
+      "data table",
+      "grid",
+      "list",
+      "rows",
+      "columns",
+      "bảng",
+      "danh sách",
+      "lưới dữ liệu"
+    ],
+    "example": "<Table><TableHeader><TableRow><TableHead>Khách</TableHead><TableHead className=\"text-right\">Tổng</TableHead></TableRow></TableHeader><TableBody>…</TableBody></Table>",
+    "related": [
+      "pagination",
+      "item",
+      "checkbox"
+    ],
+    "import": "@/components/ui/table",
+    "exports": [
+      "Table",
+      "TableHeader",
+      "TableBody",
+      "TableFooter",
+      "TableHead",
+      "TableRow",
+      "TableCell",
+      "TableCaption"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "trace",
+    "category": "data",
+    "summary": "Vertical list of steps with status (running, pending, error) and collapsible details.",
+    "use_when": [
+      "process/activity timelines, job or agent steps, audit trail"
+    ],
+    "avoid_when": "Simple static lists.",
+    "keywords": [
+      "timeline",
+      "steps log",
+      "activity",
+      "history",
+      "dòng thời gian",
+      "lịch sử",
+      "các bước"
+    ],
+    "example": "<Trace><TraceLine status=\"running\" /><TraceTitle>Đang đồng bộ</TraceTitle></Trace>",
+    "related": [],
+    "import": "@/components/ui/trace",
+    "exports": [
+      "Trace",
+      "TraceLine",
+      "TraceIcon",
+      "TraceTitle",
+      "TraceDescription",
+      "TraceCollapsible",
+      "TraceCollapsibleTrigger",
+      "TraceCollapsibleContent"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "alert",
+    "category": "feedback",
+    "summary": "Inline message box with icon, title, description and optional action.",
+    "use_when": [
+      "page- or section-level warnings and errors",
+      "critical value banners"
+    ],
+    "avoid_when": "Transient confirmations; use toast.",
+    "keywords": [
+      "banner",
+      "warning",
+      "error message",
+      "notice",
+      "cảnh báo",
+      "thông báo lỗi"
+    ],
+    "example": "<Alert variant=\"destructive\"><TriangleAlertIcon /><AlertTitle>Không tải được dữ liệu</AlertTitle><AlertDescription>…</AlertDescription></Alert>",
+    "related": [
+      "toast",
+      "empty"
+    ],
+    "import": "@/components/ui/alert",
+    "exports": [
+      "Alert",
+      "AlertTitle",
+      "AlertDescription",
+      "AlertAction"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "destructive"
+      ]
+    },
+    "deps": []
+  },
+  {
+    "name": "empty",
+    "category": "feedback",
+    "summary": "Empty state: icon, title, description and actions.",
+    "use_when": [
+      "no data yet",
+      "no search results",
+      "nothing to do"
+    ],
+    "avoid_when": "Loading; use skeleton.",
+    "keywords": [
+      "empty state",
+      "no data",
+      "no results",
+      "trống",
+      "không có dữ liệu",
+      "không tìm thấy"
+    ],
+    "example": "<Empty><EmptyHeader><EmptyMedia variant=\"icon\"><InboxIcon /></EmptyMedia><EmptyTitle>Chưa có đơn</EmptyTitle><EmptyDescription>…</EmptyDescription></EmptyHeader><EmptyContent><Button>Tạo đơn</Button></EmptyContent></Empty>",
+    "related": [],
+    "import": "@/components/ui/empty",
+    "exports": [
+      "Empty",
+      "EmptyHeader",
+      "EmptyTitle",
+      "EmptyDescription",
+      "EmptyContent",
+      "EmptyMedia"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "icon"
+      ]
+    },
+    "deps": []
+  },
+  {
+    "name": "skeleton",
+    "category": "feedback",
+    "summary": "Placeholder blocks while content loads.",
+    "use_when": [
+      "initial load of lists, cards, charts"
+    ],
+    "avoid_when": "Actions in progress; use spinner.",
+    "keywords": [
+      "loading",
+      "placeholder",
+      "shimmer",
+      "đang tải"
+    ],
+    "example": "<Skeleton className=\"h-4 w-32\" />",
+    "related": [
+      "spinner"
+    ],
+    "import": "@/components/ui/skeleton",
+    "exports": [
+      "Skeleton"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "spinner",
+    "category": "feedback",
+    "summary": "Indeterminate loading indicator.",
+    "use_when": [
+      "buttons while submitting",
+      "small async regions"
+    ],
+    "avoid_when": "Whole-page loads; use skeleton.",
+    "keywords": [
+      "loading",
+      "spinner",
+      "đang xử lý"
+    ],
+    "example": "<Button disabled><Spinner /> Đang lưu</Button>",
+    "related": [
+      "skeleton"
+    ],
+    "import": "@/components/ui/spinner",
+    "exports": [
+      "Spinner"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "toast",
+    "category": "feedback",
+    "summary": "Transient notification (Base UI toast manager).",
+    "use_when": [
+      "confirm a completed action ('Đã lưu')",
+      "background errors"
+    ],
+    "avoid_when": "Information the user must act on; use alert/dialog.",
+    "keywords": [
+      "notification",
+      "snackbar",
+      "sonner",
+      "thông báo",
+      "đã lưu"
+    ],
+    "example": "toast.add({ title: \"Đã lưu chương trình\" })  // <Toaster> is mounted in App.tsx",
+    "related": [],
+    "import": "@/components/ui/toast",
+    "exports": [
+      "Toaster",
+      "Toast",
+      "ToastAction",
+      "ToastClose",
+      "ToastContent",
+      "ToastDescription",
+      "ToastPortal",
+      "ToastProvider",
+      "ToastTitle",
+      "ToastViewport",
+      "createToastManager",
+      "toast",
+      "useToastManager"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/toast"
+    ]
+  },
+  {
+    "name": "calendar",
+    "category": "form",
+    "summary": "Month calendar for picking a date or a date range (react-day-picker).",
+    "use_when": [
+      "date pickers inside a popover",
+      "date range filters",
+      "booking"
+    ],
+    "avoid_when": "Free typing of known dates; offer an input too.",
+    "keywords": [
+      "date picker",
+      "date range",
+      "calendar",
+      "lịch",
+      "chọn ngày",
+      "khoảng ngày"
+    ],
+    "example": "<Popover><PopoverTrigger render={<Button variant=\"outline\">23/10/2026</Button>} /><PopoverContent><Calendar mode=\"range\" selected={range} onSelect={setRange} /></PopoverContent></Popover>",
+    "related": [
+      "popover"
+    ],
+    "import": "@/components/ui/calendar",
+    "exports": [
+      "Calendar",
+      "CalendarDayButton"
+    ],
+    "variants": {},
+    "deps": [
+      "react-day-picker"
+    ]
+  },
+  {
+    "name": "checkbox",
+    "category": "form",
+    "summary": "Boolean or multi-choice checkbox, with indeterminate state.",
+    "use_when": [
+      "multi-select options",
+      "row selection in tables",
+      "agree to terms"
+    ],
+    "avoid_when": "Instant on/off settings; use switch.",
+    "keywords": [
+      "check",
+      "tick",
+      "select row",
+      "ô chọn",
+      "đánh dấu"
+    ],
+    "example": "<Checkbox checked={v} onCheckedChange={setV} />",
+    "related": [
+      "switch",
+      "radio-group"
+    ],
+    "import": "@/components/ui/checkbox",
+    "exports": [
+      "Checkbox"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/checkbox"
+    ]
+  },
+  {
+    "name": "combobox",
+    "category": "form",
+    "summary": "Searchable select, single or multiple, with chips.",
+    "use_when": [
+      "long lists (products, customers)",
+      "multi-select with tags",
+      "async search"
+    ],
+    "avoid_when": "A few options; use select or radio.",
+    "keywords": [
+      "autocomplete",
+      "searchable select",
+      "multi select",
+      "typeahead",
+      "tìm và chọn",
+      "chọn nhiều"
+    ],
+    "example": "<Combobox items={products}><ComboboxInput placeholder=\"Chọn sản phẩm\" /><ComboboxContent><ComboboxList>{(p) => <ComboboxItem value={p}>{p.name}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox>",
+    "related": [
+      "select",
+      "command"
+    ],
+    "import": "@/components/ui/combobox",
+    "exports": [
+      "Combobox",
+      "ComboboxInput",
+      "ComboboxContent",
+      "ComboboxList",
+      "ComboboxItem",
+      "ComboboxGroup",
+      "ComboboxLabel",
+      "ComboboxCollection",
+      "ComboboxEmpty",
+      "ComboboxSeparator",
+      "ComboboxChips",
+      "ComboboxChip",
+      "ComboboxChipsInput",
+      "ComboboxTrigger",
+      "ComboboxValue",
+      "useComboboxAnchor"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "field",
+    "category": "form",
+    "summary": "Form field layout: label, control, description, error; groups and fieldsets.",
+    "use_when": [
+      "every form control that needs a label, help text or validation message"
+    ],
+    "avoid_when": "—",
+    "keywords": [
+      "form field",
+      "label",
+      "validation",
+      "error message",
+      "trường",
+      "biểu mẫu",
+      "form",
+      "lỗi nhập"
+    ],
+    "example": "<Field><FieldLabel htmlFor=\"name\">Tên chương trình</FieldLabel><Input id=\"name\" /><FieldDescription>Hiển thị cho khách</FieldDescription><FieldError>…</FieldError></Field>",
+    "related": [
+      "input",
+      "label"
+    ],
+    "import": "@/components/ui/field",
+    "exports": [
+      "Field",
+      "FieldLabel",
+      "FieldDescription",
+      "FieldError",
+      "FieldGroup",
+      "FieldLegend",
+      "FieldSeparator",
+      "FieldSet",
+      "FieldContent",
+      "FieldTitle"
+    ],
+    "variants": {
+      "orientation": [
+        "vertical",
+        "horizontal",
+        "responsive"
+      ]
+    },
+    "deps": []
+  },
+  {
+    "name": "input",
+    "category": "form",
+    "summary": "Single-line text input.",
+    "use_when": [
+      "text, email, phone, search, numbers"
+    ],
+    "avoid_when": "Long text; use textarea.",
+    "keywords": [
+      "text box",
+      "textfield",
+      "ô nhập",
+      "nhập liệu"
+    ],
+    "example": "<Input placeholder=\"Tìm theo tên, SĐT\" />",
+    "related": [
+      "input-group",
+      "field"
+    ],
+    "import": "@/components/ui/input",
+    "exports": [
+      "Input"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/input"
+    ]
+  },
+  {
+    "name": "input-group",
+    "category": "form",
+    "summary": "Input with attached addons: icons, buttons, text (₫, %, https://).",
+    "use_when": [
+      "search with icon",
+      "money/percent inputs with a unit",
+      "input with clear/copy button"
+    ],
+    "avoid_when": "Plain inputs.",
+    "keywords": [
+      "addon",
+      "prefix",
+      "suffix",
+      "icon input",
+      "đơn vị",
+      "ô tìm kiếm"
+    ],
+    "example": "<InputGroup><InputGroupInput inputMode=\"numeric\" /><InputGroupAddon align=\"inline-end\"><InputGroupText>₫</InputGroupText></InputGroupAddon></InputGroup>",
+    "related": [],
+    "import": "@/components/ui/input-group",
+    "exports": [
+      "InputGroup",
+      "InputGroupAddon",
+      "InputGroupButton",
+      "InputGroupText",
+      "InputGroupInput",
+      "InputGroupTextarea"
+    ],
+    "variants": {
+      "align": [
+        "inline-start",
+        "inline-end",
+        "block-start",
+        "block-end"
+      ]
+    },
+    "deps": []
+  },
+  {
+    "name": "input-otp",
+    "category": "form",
+    "summary": "One-time code input split into slots.",
+    "use_when": [
+      "OTP / 2FA verification"
+    ],
+    "avoid_when": "Other numbers.",
+    "keywords": [
+      "otp",
+      "verification code",
+      "mã xác thực"
+    ],
+    "example": "<InputOTP maxLength={6}><InputOTPGroup><InputOTPSlot index={0} />…</InputOTPGroup></InputOTP>",
+    "related": [],
+    "import": "@/components/ui/input-otp",
+    "exports": [
+      "InputOTP",
+      "InputOTPGroup",
+      "InputOTPSlot",
+      "InputOTPSeparator"
+    ],
+    "variants": {},
+    "deps": [
+      "input-otp"
+    ]
+  },
+  {
+    "name": "label",
+    "category": "form",
+    "summary": "Accessible label for a control.",
+    "use_when": [
+      "standalone controls outside Field"
+    ],
+    "avoid_when": "Inside Field; use FieldLabel.",
+    "keywords": [
+      "label",
+      "nhãn"
+    ],
+    "example": "<Label htmlFor=\"x\">Tên</Label>",
+    "related": [],
+    "import": "@/components/ui/label",
+    "exports": [
+      "Label"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "native-select",
+    "category": "form",
+    "summary": "Browser-native select styled to match.",
+    "use_when": [
+      "mobile-first forms, very simple pickers"
+    ],
+    "avoid_when": "When you need search or rich items.",
+    "keywords": [
+      "native dropdown",
+      "chọn đơn giản"
+    ],
+    "example": "<NativeSelect><NativeSelectOption value=\"1\">Một</NativeSelectOption></NativeSelect>",
+    "related": [],
+    "import": "@/components/ui/native-select",
+    "exports": [
+      "NativeSelect",
+      "NativeSelectOptGroup",
+      "NativeSelectOption"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "questionnaire",
+    "category": "form",
+    "summary": "Step-by-step question flow with choices, progress, inputs, errors and actions.",
+    "use_when": [
+      "surveys, onboarding quizzes, guided intake forms"
+    ],
+    "avoid_when": "Ordinary data-entry forms; use field.",
+    "keywords": [
+      "survey",
+      "quiz",
+      "wizard",
+      "stepper",
+      "multi-step form",
+      "khảo sát",
+      "câu hỏi",
+      "từng bước"
+    ],
+    "example": "<Questionnaire><QuestionnaireTitle>…</QuestionnaireTitle><QuestionnaireChoices>…</QuestionnaireChoices><QuestionnaireActions>…</QuestionnaireActions></Questionnaire>",
+    "related": [],
+    "import": "@/components/ui/questionnaire",
+    "exports": [
+      "Questionnaire",
+      "QuestionnaireActions",
+      "QuestionnaireChoice",
+      "QuestionnaireChoiceDescription",
+      "QuestionnaireChoices",
+      "QuestionnaireDescription",
+      "QuestionnaireError",
+      "QuestionnaireInput",
+      "QuestionnaireItem",
+      "QuestionnaireNext",
+      "QuestionnairePrevious",
+      "QuestionnaireProgress",
+      "QuestionnaireSkip",
+      "QuestionnaireSubmit",
+      "QuestionnaireTitle"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "radio-group",
+    "category": "form",
+    "summary": "Pick exactly one of a few visible options.",
+    "use_when": [
+      "2–5 mutually exclusive options the user should compare"
+    ],
+    "avoid_when": "Many options; use select/combobox.",
+    "keywords": [
+      "radio",
+      "single choice",
+      "chọn một",
+      "lựa chọn"
+    ],
+    "example": "<RadioGroup value={v} onValueChange={setV}><RadioGroupItem value=\"percent\" /> …</RadioGroup>",
+    "related": [
+      "select",
+      "toggle-group"
+    ],
+    "import": "@/components/ui/radio-group",
+    "exports": [
+      "RadioGroup",
+      "RadioGroupItem"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/radio",
+      "@base-ui/react/radio-group"
+    ]
+  },
+  {
+    "name": "select",
+    "category": "form",
+    "summary": "Dropdown to pick one option from a short list.",
+    "use_when": [
+      "5–15 known options"
+    ],
+    "avoid_when": "Long or searchable lists; use combobox.",
+    "keywords": [
+      "dropdown",
+      "picker",
+      "chọn",
+      "danh sách thả xuống"
+    ],
+    "example": "<Select value={v} onValueChange={setV}><SelectTrigger><SelectValue placeholder=\"Chi nhánh\" /></SelectTrigger><SelectContent><SelectItem value=\"q1\">Quận 1</SelectItem></SelectContent></Select>",
+    "related": [
+      "combobox",
+      "native-select",
+      "radio-group"
+    ],
+    "import": "@/components/ui/select",
+    "exports": [
+      "Select",
+      "SelectContent",
+      "SelectGroup",
+      "SelectItem",
+      "SelectLabel",
+      "SelectScrollDownButton",
+      "SelectScrollUpButton",
+      "SelectSeparator",
+      "SelectTrigger",
+      "SelectValue"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/select"
+    ]
+  },
+  {
+    "name": "slider",
+    "category": "form",
+    "summary": "Pick a number or range by dragging.",
+    "use_when": [
+      "approximate values, price ranges"
+    ],
+    "avoid_when": "Exact values; use input.",
+    "keywords": [
+      "range",
+      "slider",
+      "thanh trượt",
+      "khoảng giá"
+    ],
+    "example": "<Slider defaultValue={[20, 80]} />",
+    "related": [],
+    "import": "@/components/ui/slider",
+    "exports": [
+      "Slider"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/slider"
+    ]
+  },
+  {
+    "name": "switch",
+    "category": "form",
+    "summary": "On/off toggle that applies immediately.",
+    "use_when": [
+      "settings that take effect at once",
+      "'show only abnormal' style filters"
+    ],
+    "avoid_when": "Form choices saved later; use checkbox.",
+    "keywords": [
+      "toggle",
+      "on off",
+      "bật tắt",
+      "công tắc"
+    ],
+    "example": "<Switch checked={on} onCheckedChange={setOn} />",
+    "related": [
+      "checkbox"
+    ],
+    "import": "@/components/ui/switch",
+    "exports": [
+      "Switch"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/switch"
+    ]
+  },
+  {
+    "name": "textarea",
+    "category": "form",
+    "summary": "Multi-line text input.",
+    "use_when": [
+      "notes, descriptions, comments"
+    ],
+    "avoid_when": "Short values.",
+    "keywords": [
+      "multiline",
+      "notes",
+      "ghi chú",
+      "mô tả"
+    ],
+    "example": "<Textarea rows={4} />",
+    "related": [],
+    "import": "@/components/ui/textarea",
+    "exports": [
+      "Textarea"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "toggle",
+    "category": "form",
+    "summary": "Single pressable on/off button.",
+    "use_when": [
+      "toolbar formatting buttons (bold, pin)"
+    ],
+    "avoid_when": "Settings; use switch.",
+    "keywords": [
+      "toggle button",
+      "nút bật"
+    ],
+    "example": "<Toggle aria-label=\"Ghim\"><PinIcon /></Toggle>",
+    "related": [
+      "toggle-group"
+    ],
+    "import": "@/components/ui/toggle",
+    "exports": [
+      "Toggle",
+      "toggleVariants"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "outline"
+      ],
+      "size": [
+        "default",
+        "sm",
+        "lg"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/toggle"
+    ]
+  },
+  {
+    "name": "toggle-group",
+    "category": "form",
+    "summary": "Set of toggle buttons; single-select works as a segmented control.",
+    "use_when": [
+      "period pickers (7/30/90 ngày)",
+      "view switches (bảng/thẻ)",
+      "small filters"
+    ],
+    "avoid_when": "More than ~5 options.",
+    "keywords": [
+      "segmented control",
+      "button group select",
+      "period selector",
+      "chọn kỳ",
+      "chế độ xem"
+    ],
+    "example": "<ToggleGroup value={[period]} onValueChange={(v) => setPeriod(v[0])}><ToggleGroupItem value=\"7d\">7 ngày</ToggleGroupItem><ToggleGroupItem value=\"30d\">30 ngày</ToggleGroupItem></ToggleGroup>",
+    "related": [
+      "tabs",
+      "radio-group"
+    ],
+    "import": "@/components/ui/toggle-group",
+    "exports": [
+      "ToggleGroup",
+      "ToggleGroupItem"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/toggle",
+      "@base-ui/react/toggle-group"
+    ]
+  },
+  {
+    "name": "accordion",
+    "category": "layout",
+    "summary": "Stacked sections that expand/collapse, usually one at a time.",
+    "use_when": [
+      "FAQs, grouped settings, long forms split into sections"
+    ],
+    "avoid_when": "Primary content the user always needs; don't hide it.",
+    "keywords": [
+      "faq",
+      "expand",
+      "sections",
+      "hỏi đáp",
+      "câu hỏi thường gặp",
+      "xổ xuống"
+    ],
+    "example": "<Accordion><AccordionItem value=\"a\"><AccordionTrigger>Câu hỏi</AccordionTrigger><AccordionContent>Trả lời</AccordionContent></AccordionItem></Accordion>",
+    "related": [
+      "collapsible",
+      "tabs"
+    ],
+    "import": "@/components/ui/accordion",
+    "exports": [
+      "Accordion",
+      "AccordionItem",
+      "AccordionTrigger",
+      "AccordionContent"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/accordion"
+    ]
+  },
+  {
+    "name": "aspect-ratio",
+    "category": "layout",
+    "summary": "Keeps media at a fixed width:height ratio.",
+    "use_when": [
+      "images, video, maps, thumbnails"
+    ],
+    "avoid_when": "Text content.",
+    "keywords": [
+      "ratio",
+      "16:9",
+      "image box",
+      "tỉ lệ khung hình"
+    ],
+    "example": "<AspectRatio ratio={16/9}><img … /></AspectRatio>",
+    "related": [],
+    "import": "@/components/ui/aspect-ratio",
+    "exports": [
+      "AspectRatio"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "card",
+    "category": "layout",
+    "summary": "Bordered surface grouping one topic: header (title, description, action), content, footer.",
+    "use_when": [
+      "a KPI or stat block",
+      "a panel of related info on a dashboard or detail page",
+      "a settings section"
+    ],
+    "avoid_when": "Wrapping every element in a card, or nesting cards; use spacing/Separator inside one card instead.",
+    "keywords": [
+      "panel",
+      "box",
+      "section",
+      "tile",
+      "khung",
+      "thẻ",
+      "khối"
+    ],
+    "example": "<Card><CardHeader><CardTitle>Doanh thu</CardTitle><CardAction>…</CardAction></CardHeader><CardContent>…</CardContent></Card>",
+    "related": [
+      "item",
+      "separator"
+    ],
+    "import": "@/components/ui/card",
+    "exports": [
+      "Card",
+      "CardHeader",
+      "CardFooter",
+      "CardTitle",
+      "CardAction",
+      "CardDescription",
+      "CardContent"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "collapsible",
+    "category": "layout",
+    "summary": "Show/hide one region with a trigger.",
+    "use_when": [
+      "optional details, advanced filters, 'xem thêm'"
+    ],
+    "avoid_when": "Several sections where only one opens; use accordion.",
+    "keywords": [
+      "expand",
+      "toggle section",
+      "show more",
+      "thu gọn",
+      "mở rộng",
+      "xem thêm"
+    ],
+    "example": "<Collapsible><CollapsibleTrigger>Bộ lọc nâng cao</CollapsibleTrigger><CollapsibleContent>…</CollapsibleContent></Collapsible>",
+    "related": [
+      "accordion"
+    ],
+    "import": "@/components/ui/collapsible",
+    "exports": [
+      "Collapsible",
+      "CollapsibleTrigger",
+      "CollapsibleContent"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/collapsible"
+    ]
+  },
+  {
+    "name": "direction",
+    "category": "layout",
+    "summary": "Provider that sets LTR/RTL direction for components.",
+    "use_when": [
+      "right-to-left languages"
+    ],
+    "avoid_when": "Vietnamese/English UIs; not needed.",
+    "keywords": [
+      "rtl",
+      "ltr",
+      "direction"
+    ],
+    "example": "<DirectionProvider direction=\"rtl\">…</DirectionProvider>",
+    "related": [],
+    "import": "@/components/ui/direction",
+    "exports": [
+      "DirectionProvider",
+      "useDirection"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/direction-provider"
+    ]
+  },
+  {
+    "name": "resizable",
+    "category": "layout",
+    "summary": "Panels the user can resize by dragging a handle.",
+    "use_when": [
+      "master–detail views, editors, side-by-side compare"
+    ],
+    "avoid_when": "Normal page layouts; use CSS grid.",
+    "keywords": [
+      "split view",
+      "pane",
+      "drag to resize",
+      "chia khung",
+      "kéo giãn"
+    ],
+    "example": "<ResizablePanelGroup direction=\"horizontal\"><ResizablePanel>…</ResizablePanel><ResizableHandle /><ResizablePanel>…</ResizablePanel></ResizablePanelGroup>",
+    "related": [],
+    "import": "@/components/ui/resizable",
+    "exports": [
+      "ResizableHandle",
+      "ResizablePanel",
+      "ResizablePanelGroup"
+    ],
+    "variants": {},
+    "deps": [
+      "react-resizable-panels"
+    ]
+  },
+  {
+    "name": "scroll-area",
+    "category": "layout",
+    "summary": "Scrollable region with a styled scrollbar.",
+    "use_when": [
+      "a fixed-height list inside a card or popover"
+    ],
+    "avoid_when": "The whole page; let the document scroll.",
+    "keywords": [
+      "scroll",
+      "overflow",
+      "cuộn",
+      "thanh cuộn"
+    ],
+    "example": "<ScrollArea className=\"h-72\">…</ScrollArea>",
+    "related": [],
+    "import": "@/components/ui/scroll-area",
+    "exports": [
+      "ScrollArea",
+      "ScrollBar"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/scroll-area"
+    ]
+  },
+  {
+    "name": "separator",
+    "category": "layout",
+    "summary": "Thin horizontal or vertical divider line.",
+    "use_when": [
+      "separating groups inside one card or menu",
+      "between toolbar groups"
+    ],
+    "avoid_when": "Between every short list item; prefer spacing.",
+    "keywords": [
+      "divider",
+      "line",
+      "hr",
+      "đường kẻ",
+      "phân cách"
+    ],
+    "example": "<Separator orientation=\"vertical\" className=\"h-4\" />",
+    "related": [],
+    "import": "@/components/ui/separator",
+    "exports": [
+      "Separator"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/separator"
+    ]
+  },
+  {
+    "name": "sidebar",
+    "category": "layout",
+    "summary": "App navigation sidebar with groups, menu items, collapse to icons, and mobile sheet.",
+    "use_when": [
+      "the main navigation of a multi-page app or back office"
+    ],
+    "avoid_when": "Single-page tools or landing pages; use a top header instead.",
+    "keywords": [
+      "app shell",
+      "navigation",
+      "nav",
+      "menu",
+      "thanh bên",
+      "điều hướng",
+      "menu trái"
+    ],
+    "example": "<SidebarProvider><Sidebar><SidebarContent><SidebarGroup><SidebarMenu><SidebarMenuItem><SidebarMenuButton>Đơn hàng</SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarGroup></SidebarContent></Sidebar><SidebarInset>…</SidebarInset></SidebarProvider>",
+    "related": [
+      "navigation-menu",
+      "sheet"
+    ],
+    "import": "@/components/ui/sidebar",
+    "exports": [
+      "Sidebar",
+      "SidebarContent",
+      "SidebarFooter",
+      "SidebarGroup",
+      "SidebarGroupAction",
+      "SidebarGroupContent",
+      "SidebarGroupLabel",
+      "SidebarHeader",
+      "SidebarInput",
+      "SidebarInset",
+      "SidebarMenu",
+      "SidebarMenuAction",
+      "SidebarMenuBadge",
+      "SidebarMenuButton",
+      "SidebarMenuItem",
+      "SidebarMenuSkeleton",
+      "SidebarMenuSub",
+      "SidebarMenuSubButton",
+      "SidebarMenuSubItem",
+      "SidebarProvider",
+      "SidebarRail",
+      "SidebarSeparator",
+      "SidebarTrigger",
+      "useSidebar"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "outline"
+      ],
+      "size": [
+        "default",
+        "sm",
+        "lg"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "breadcrumb",
+    "category": "navigation",
+    "summary": "Path from section to current page.",
+    "use_when": [
+      "detail pages two or more levels deep"
+    ],
+    "avoid_when": "Top-level pages or flat apps.",
+    "keywords": [
+      "path",
+      "trail",
+      "đường dẫn",
+      "vị trí trang"
+    ],
+    "example": "<Breadcrumb><BreadcrumbList><BreadcrumbItem><BreadcrumbLink href=\"/don-hang\">Đơn hàng</BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem><BreadcrumbPage>#1024</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb>",
+    "related": [],
+    "import": "@/components/ui/breadcrumb",
+    "exports": [
+      "Breadcrumb",
+      "BreadcrumbList",
+      "BreadcrumbItem",
+      "BreadcrumbLink",
+      "BreadcrumbPage",
+      "BreadcrumbSeparator",
+      "BreadcrumbEllipsis"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/merge-props",
+      "@base-ui/react/use-render"
+    ]
+  },
+  {
+    "name": "command",
+    "category": "navigation",
+    "summary": "Searchable command list (⌘K palette); also the list inside comboboxes.",
+    "use_when": [
+      "global search / quick actions",
+      "jump to record"
+    ],
+    "avoid_when": "A plain dropdown of a few options.",
+    "keywords": [
+      "command palette",
+      "cmdk",
+      "search",
+      "quick actions",
+      "tìm nhanh",
+      "tìm kiếm"
+    ],
+    "example": "<CommandDialog open={open} onOpenChange={setOpen}><CommandInput placeholder=\"Tìm…\" /><CommandList><CommandGroup heading=\"Trang\"><CommandItem>Đơn hàng</CommandItem></CommandGroup></CommandList></CommandDialog>",
+    "related": [
+      "combobox",
+      "kbd"
+    ],
+    "import": "@/components/ui/command",
+    "exports": [
+      "Command",
+      "CommandDialog",
+      "CommandInput",
+      "CommandList",
+      "CommandEmpty",
+      "CommandGroup",
+      "CommandItem",
+      "CommandShortcut",
+      "CommandSeparator"
+    ],
+    "variants": {},
+    "deps": [
+      "cmdk"
+    ]
+  },
+  {
+    "name": "menubar",
+    "category": "navigation",
+    "summary": "Desktop-app style menu bar (File, Edit, View…).",
+    "use_when": [
+      "editor-like tools"
+    ],
+    "avoid_when": "Normal web apps.",
+    "keywords": [
+      "menu bar",
+      "file menu",
+      "thanh menu"
+    ],
+    "example": "<Menubar><MenubarMenu><MenubarTrigger>Tệp</MenubarTrigger><MenubarContent>…</MenubarContent></MenubarMenu></Menubar>",
+    "related": [],
+    "import": "@/components/ui/menubar",
+    "exports": [
+      "Menubar",
+      "MenubarPortal",
+      "MenubarMenu",
+      "MenubarTrigger",
+      "MenubarContent",
+      "MenubarGroup",
+      "MenubarSeparator",
+      "MenubarLabel",
+      "MenubarItem",
+      "MenubarShortcut",
+      "MenubarCheckboxItem",
+      "MenubarRadioGroup",
+      "MenubarRadioItem",
+      "MenubarSub",
+      "MenubarSubTrigger",
+      "MenubarSubContent"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/menu",
+      "@base-ui/react/menubar"
+    ]
+  },
+  {
+    "name": "navigation-menu",
+    "category": "navigation",
+    "summary": "Horizontal top navigation with dropdown panels.",
+    "use_when": [
+      "marketing sites and landing pages with a top nav"
+    ],
+    "avoid_when": "Back-office apps; use sidebar.",
+    "keywords": [
+      "top nav",
+      "header menu",
+      "mega menu",
+      "menu ngang",
+      "thanh điều hướng"
+    ],
+    "example": "<NavigationMenu><NavigationMenuList><NavigationMenuItem><NavigationMenuTrigger>Sản phẩm</NavigationMenuTrigger><NavigationMenuContent>…</NavigationMenuContent></NavigationMenuItem></NavigationMenuList></NavigationMenu>",
+    "related": [
+      "sidebar",
+      "menubar"
+    ],
+    "import": "@/components/ui/navigation-menu",
+    "exports": [
+      "NavigationMenu",
+      "NavigationMenuContent",
+      "NavigationMenuIndicator",
+      "NavigationMenuItem",
+      "NavigationMenuLink",
+      "NavigationMenuList",
+      "NavigationMenuTrigger",
+      "navigationMenuTriggerStyle",
+      "NavigationMenuPositioner"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/navigation-menu"
+    ]
+  },
+  {
+    "name": "pagination",
+    "category": "navigation",
+    "summary": "Page number links with previous/next.",
+    "use_when": [
+      "long tables and lists split into pages"
+    ],
+    "avoid_when": "Short lists, or feeds (use load more / infinite scroll).",
+    "keywords": [
+      "pages",
+      "next page",
+      "phân trang",
+      "trang sau"
+    ],
+    "example": "<Pagination><PaginationContent><PaginationItem><PaginationPrevious href=\"#\" /></PaginationItem>…</PaginationContent></Pagination>",
+    "related": [
+      "table"
+    ],
+    "import": "@/components/ui/pagination",
+    "exports": [
+      "Pagination",
+      "PaginationContent",
+      "PaginationEllipsis",
+      "PaginationItem",
+      "PaginationLink",
+      "PaginationNext",
+      "PaginationPrevious"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
+    "name": "tabs",
+    "category": "navigation",
+    "summary": "Switch between views of the same context; 'line' variant for page-level tabs.",
+    "use_when": [
+      "record detail sections (Thông tin / Lịch sử)",
+      "saved views of a list",
+      "settings pages"
+    ],
+    "avoid_when": "Sequential steps (use a stepper) or more than ~6 options (use select).",
+    "keywords": [
+      "tab",
+      "views",
+      "segments",
+      "thẻ",
+      "tab",
+      "chế độ xem"
+    ],
+    "example": "<Tabs defaultValue=\"info\"><TabsList variant=\"line\"><TabsTrigger value=\"info\">Thông tin</TabsTrigger></TabsList><TabsContent value=\"info\">…</TabsContent></Tabs>",
+    "related": [
+      "toggle-group"
+    ],
+    "import": "@/components/ui/tabs",
+    "exports": [
+      "Tabs",
+      "TabsList",
+      "TabsTrigger",
+      "TabsContent",
+      "tabsListVariants"
+    ],
+    "variants": {
+      "variant": [
+        "default",
+        "line"
+      ]
+    },
+    "deps": [
+      "@base-ui/react/tabs"
+    ]
+  },
+  {
+    "name": "alert-dialog",
+    "category": "overlay",
+    "summary": "Blocking confirmation with cancel/confirm.",
+    "use_when": [
+      "destructive or irreversible actions"
+    ],
+    "avoid_when": "Non-destructive info.",
+    "keywords": [
+      "confirm",
+      "are you sure",
+      "xác nhận",
+      "xoá"
+    ],
+    "example": "<AlertDialog><AlertDialogTrigger render={<Button variant=\"destructive\">Xoá</Button>} /><AlertDialogContent>…<AlertDialogAction>Xoá</AlertDialogAction></AlertDialogContent></AlertDialog>",
+    "related": [],
+    "import": "@/components/ui/alert-dialog",
+    "exports": [
+      "AlertDialog",
+      "AlertDialogAction",
+      "AlertDialogCancel",
+      "AlertDialogContent",
+      "AlertDialogDescription",
+      "AlertDialogFooter",
+      "AlertDialogHeader",
+      "AlertDialogMedia",
+      "AlertDialogOverlay",
+      "AlertDialogPortal",
+      "AlertDialogTitle",
+      "AlertDialogTrigger"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/alert-dialog"
+    ]
+  },
+  {
+    "name": "dialog",
+    "category": "overlay",
+    "summary": "Modal window for a focused task.",
+    "use_when": [
+      "short forms (create/edit), previews"
+    ],
+    "avoid_when": "Long content (use a page or sheet); confirmations (use alert-dialog).",
+    "keywords": [
+      "modal",
+      "popup",
+      "hộp thoại",
+      "cửa sổ"
+    ],
+    "example": "<Dialog><DialogTrigger render={<Button>Thêm</Button>} /><DialogContent><DialogHeader><DialogTitle>Thêm khách</DialogTitle></DialogHeader>…</DialogContent></Dialog>",
+    "related": [
+      "alert-dialog",
+      "sheet",
+      "drawer"
+    ],
+    "import": "@/components/ui/dialog",
+    "exports": [
+      "Dialog",
+      "DialogClose",
+      "DialogContent",
+      "DialogDescription",
+      "DialogFooter",
+      "DialogHeader",
+      "DialogOverlay",
+      "DialogPortal",
+      "DialogTitle",
+      "DialogTrigger"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/dialog"
+    ]
+  },
+  {
+    "name": "drawer",
+    "category": "overlay",
+    "summary": "Bottom drawer with swipe handle (mobile-friendly).",
+    "use_when": [
+      "mobile actions and quick forms"
+    ],
+    "avoid_when": "Desktop detail panels; use sheet.",
+    "keywords": [
+      "bottom sheet",
+      "mobile drawer",
+      "ngăn kéo dưới"
+    ],
+    "example": "<Drawer><DrawerTrigger>…</DrawerTrigger><DrawerContent>…</DrawerContent></Drawer>",
+    "related": [
+      "sheet"
+    ],
+    "import": "@/components/ui/drawer",
+    "exports": [
+      "Drawer",
+      "DrawerPortal",
+      "DrawerOverlay",
+      "DrawerSwipeHandle",
+      "DrawerTrigger",
+      "DrawerClose",
+      "DrawerContent",
+      "DrawerHeader",
+      "DrawerFooter",
+      "DrawerTitle",
+      "DrawerDescription"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/drawer"
+    ]
+  },
+  {
+    "name": "hover-card",
+    "category": "overlay",
+    "summary": "Rich preview on hover.",
+    "use_when": [
+      "person or link previews"
+    ],
+    "avoid_when": "Mobile-critical info (no hover on touch).",
+    "keywords": [
+      "preview",
+      "profile card",
+      "xem nhanh"
+    ],
+    "example": "<HoverCard><HoverCardTrigger>@an</HoverCardTrigger><HoverCardContent>…</HoverCardContent></HoverCard>",
+    "related": [],
+    "import": "@/components/ui/hover-card",
+    "exports": [
+      "HoverCard",
+      "HoverCardTrigger",
+      "HoverCardContent"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/preview-card"
+    ]
+  },
+  {
+    "name": "popover",
+    "category": "overlay",
+    "summary": "Floating panel anchored to a trigger.",
+    "use_when": [
+      "date pickers, small filter forms, inline editors"
+    ],
+    "avoid_when": "Plain hints; use tooltip.",
+    "keywords": [
+      "floating panel",
+      "popup",
+      "khung nổi"
+    ],
+    "example": "<Popover><PopoverTrigger render={<Button variant=\"outline\">Lọc</Button>} /><PopoverContent>…</PopoverContent></Popover>",
+    "related": [
+      "tooltip",
+      "hover-card"
+    ],
+    "import": "@/components/ui/popover",
+    "exports": [
+      "Popover",
+      "PopoverContent",
+      "PopoverDescription",
+      "PopoverHeader",
+      "PopoverTitle",
+      "PopoverTrigger"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/popover"
+    ]
+  },
+  {
+    "name": "sheet",
+    "category": "overlay",
+    "summary": "Panel sliding from a screen edge.",
+    "use_when": [
+      "record detail next to a list",
+      "filters on mobile",
+      "mobile navigation"
+    ],
+    "avoid_when": "Primary page content.",
+    "keywords": [
+      "drawer",
+      "side panel",
+      "slide over",
+      "ngăn kéo",
+      "bảng bên"
+    ],
+    "example": "<Sheet><SheetTrigger render={<Button>Chi tiết</Button>} /><SheetContent><SheetHeader><SheetTitle>Đơn #1024</SheetTitle></SheetHeader>…</SheetContent></Sheet>",
+    "related": [
+      "drawer",
+      "dialog"
+    ],
+    "import": "@/components/ui/sheet",
+    "exports": [
+      "Sheet",
+      "SheetTrigger",
+      "SheetClose",
+      "SheetContent",
+      "SheetHeader",
+      "SheetFooter",
+      "SheetTitle",
+      "SheetDescription"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/dialog"
+    ]
+  },
+  {
+    "name": "tooltip",
+    "category": "overlay",
+    "summary": "Short text hint on hover/focus.",
+    "use_when": [
+      "icon-only buttons",
+      "truncated text",
+      "explaining a metric"
+    ],
+    "avoid_when": "Essential info or anything interactive.",
+    "keywords": [
+      "hint",
+      "title",
+      "gợi ý",
+      "chú thích"
+    ],
+    "example": "<Tooltip><TooltipTrigger render={<Button size=\"icon\" aria-label=\"Xuất\"><DownloadIcon /></Button>} /><TooltipContent>Xuất Excel</TooltipContent></Tooltip>",
+    "related": [],
+    "import": "@/components/ui/tooltip",
+    "exports": [
+      "Tooltip",
+      "TooltipTrigger",
+      "TooltipContent",
+      "TooltipProvider"
+    ],
+    "variants": {},
+    "deps": [
+      "@base-ui/react/tooltip"
+    ]
+  }
+]
