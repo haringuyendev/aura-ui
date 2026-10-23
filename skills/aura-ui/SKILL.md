@@ -27,7 +27,7 @@ tokens in `src/index.css`
 colors, all AA on the background; retune their hues to the brand but keep them colorful),
 routing in `src/App.tsx`, and a placeholder `src/pages/Index.tsx`.
 
-**Existing project:** keep its stack. Apply the design-system rules below to whatever it uses.
+**Existing project:** don't use the starter. Follow "Working in an existing project" below first.
 
 ## Finding the right component
 `catalog/components.json` describes every starter component (`kind`: primitive, block or util): what
@@ -48,6 +48,38 @@ node <this-skill-folder>/scripts/add-block.mjs list
 Categories: layout, navigation, data, form, action, overlay, feedback, chat, util. Before building any
 part of a screen, `find` the component for it, and prefer a block over re-assembling its primitives; open the component file only when the catalog example is
 not enough to use it correctly.
+
+## Working in an existing project
+When the repo already has an app, its design system wins. Before the brief:
+1. **Profile it** (read-only; writes `.aura/` in the repo, which can be git-ignored or deleted):
+   ```bash
+   node <this-skill-folder>/scripts/scan-project.mjs <repo>
+   ```
+   It prints the stack, UI library, token file(s) and dark-mode selector, color tokens, fonts, status
+   and chart tokens (with contrast), primitives and existing sections, utilities, conventions, and
+   findings (undefined tokens, status colors unsafe as text, raw colors). Put a 3–5 line summary of it
+   in the brief and read the project's AGENTS.md/CLAUDE.md if listed.
+2. **Find components in the project first**: `catalog.mjs find <words> --project <repo>/.aura`. It lists
+   the project's own components (by usage), then aura entries as reference only.
+
+Then the hard rules apply with these substitutions:
+- **Rule 8 becomes "compose only from the project's components"** (`components/ui`, existing sections,
+  shared components). Never add a second UI library or copy starter files in. If a needed component is
+  missing, add it the project's way (e.g. `npx shadcn add <name>` with the project's own
+  `components.json`), or port an aura block by rewriting it for the project's primitives: Radix-based
+  shadcn uses `asChild`, the starter's Base UI uses `render`; import `cn` from the project's path.
+- **Tokens are the project's.** Use its token names and its color format. If status, info or chart
+  tokens are missing or fail contrast as text (the profile says "bg only"), add or fix them in the
+  project's token file, following its `:root` / dark-selector / `@theme` pattern, and say so in the
+  summary. Don't restyle the brand.
+- **Follow its conventions**: file layout, CMS blocks (e.g. Payload: a new section is a new block with
+  config + component, registered where blocks are rendered), routing, data fetching, i18n, formatting
+  helpers that already exist.
+- Keep the design rules of this skill (surface type, data color, spacing and layout, vi-VN, the
+  390/768/1440 check). Showcase sites (marketing, real estate, landing) may use the project's existing
+  gradients and motion; tools stay restrained.
+- Report pre-existing findings (undefined tokens, raw colors) to the user; fix only what your change
+  touches.
 
 ## Hard rules
 1. **The design system is everything.** All colors, gradients, shadows, radii, fonts and transitions

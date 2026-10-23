@@ -1,4 +1,4 @@
-# Aura UI (v0.8.1)
+# Aura UI (v0.9)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -34,6 +34,7 @@ skills/aura-ui/
   scripts/new-app.sh         copy starter sang thư mục mới và cài package
   addons/                    khối nặng cài khi cần: rich-text-editor (Tiptap), file-lightbox (PDF/Word/Excel/ảnh)
   scripts/add-block.mjs      cài add-on vào app: chép file, npm install, chép asset (font pdf.js)
+  scripts/scan-project.mjs   quét dự án có sẵn: stack, token, component, quy ước, lỗi token → .aura/
 evals/
   README.md                  quy trình A/B và 8 đề (bảng, form, dashboard)
   baseline/                  project gốc cho nhánh "không skill"
@@ -73,3 +74,12 @@ token và component của template, sửa file này là cả app đổi theo (đ
    avoid_when, keywords có cả tiếng Việt, example, related).
 3. Chạy `node skills/aura-ui/scripts/catalog.mjs sync`: tự cập nhật exports/variants từ code, báo mục
    còn thiếu hoặc thừa.
+
+## Dùng cho dự án có sẵn
+Skill không dùng starter mà theo design system của dự án:
+```bash
+node skills/aura-ui/scripts/scan-project.mjs <repo>                     # → <repo>/.aura/profile.json, components.json
+node skills/aura-ui/scripts/catalog.mjs find hộp thoại --project <repo>/.aura
+```
+Agent ghép từ component của dự án, dùng token của dự án (thêm token còn thiếu đúng chỗ khai báo), theo quy
+ước của dự án (ví dụ block Payload), và báo các lỗi token có sẵn. Có thể thêm `.aura/` vào `.gitignore`.
