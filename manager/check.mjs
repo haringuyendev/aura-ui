@@ -9,6 +9,7 @@ export const DEFAULT_RULES = {
   'foreign-ui-library': 'error',
   'duplicate-component': 'error',
   'bypasses-primitive': 'error',
+  'hand-built-surface': 'error',
   'raw-color': 'warn',
   'status-text-unsafe': 'warn',
   'img-alt': 'warn',
@@ -26,6 +27,87 @@ const lineOf = (src, index) => src.slice(0, index).split('\n').length
 /** Blank out comments and module specifiers (same length, newlines kept) so class checks ignore "text-field.tsx" in a comment or import. */
 const codeOnly = (src) => src
   .replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/[^\n]*|\b(?:from|import)\s*\(?\s*['"][^'"\n]*['"]/g, (m) => m.replace(/[^\n]/g, ' '))
+const variantsOf = (c) => (Object.keys(c.variants ?? {}).length ? ` (variants: ${Object.entries(c.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : '')
+
+const STR = /(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g
+const splitClasses = (s) => s.replace(/\$\{[^}]*\}/g, ' ').split(/\s+/).filter((c) => c && /^[!\w-]/.test(c) && !/[()]/.test(c))
+/**
+ * Class strings the file keeps outside JSX: object properties (LEVEL = { critical: { accent: "…" } }) and
+ * string constants (const rowClass = "…"), so className={cn("…", level.accent)} is judged with what it can resolve to.
+ */
+function classSources(code) {
+  const props = {}, consts = {}
+  for (const m of code.matchAll(/\b([A-Za-z_$][\w$]*)\s*:\s*(["'`])((?:(?!\2)[^\\\n]|\\.)*)\2/g)) (props[m[1]] ??= []).push(m[3])
+  for (const m of code.matchAll(/\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(["'`])((?:(?!\2)[^\\\n]|\\.)*)\2/g)) consts[m[1]] = m[3]
+  return { props, consts }
+}
+
+/** JSX elements that can stand in for a container primitive, with the classes of their className: literals (inside cn()/clsx()/ternaries too) plus the map values and constants it references. */
+function styledElements(code) {
+  const out = []
+  let sources
+  for (const m of code.matchAll(/<(div|li|section|article|aside|span|p)\b/g)) {
+    // walk to the end of the opening tag, skipping {…} and quoted text
+    let i = m.index + m[0].length, depth = 0, q = null
+    for (; i < code.length; i++) {
+      const ch = code[i]
+      if (q) { if (ch === q && code[i - 1] !== '\\') q = null; continue }
+      if (ch === '"' || ch === "'" || ch === '`') q = ch
+      else if (ch === '{') depth++
+      else if (ch === '}') depth--
+      else if (ch === '>' && depth === 0) break
+    }
+    const tag = code.slice(m.index, i)
+    const at = tag.search(/\bclassName=/)
+    if (at < 0) continue
+    let v = tag.slice(at + 10)
+    if (v[0] === '{') { let d = 0, j = 0; for (; j < v.length; j++) { if (v[j] === '{') d++; else if (v[j] === '}' && --d === 0) break } v = v.slice(0, j + 1) }
+    else v = v.match(/^(["'])[^"']*\1/)?.[0] ?? ''
+    const classes = [...v.matchAll(STR)].flatMap((x) => splitClasses(x[2]))
+    // level.accent / LEVEL[x].accent / rowClass: add what those can hold (a primitive's own fooVariants() call is not ours to judge)
+    const expr = v[0] === '{' ? v.replace(STR, ' ').replace(/\b\w+Variants\s*\([^)]*\)/g, ' ') : ''
+    if (expr.trim()) {
+      sources ??= classSources(code)
+      for (const p of expr.matchAll(/\.([A-Za-z_$][\w$]*)\b(?!\s*\()/g)) for (const val of sources.props[p[1]] ?? []) classes.push(...splitClasses(val))
+      for (const id of expr.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\b(?!\s*[(.[])/g)) if (sources.consts[id[1]] != null) classes.push(...splitClasses(sources.consts[id[1]]))
+    }
+    if (classes.length) out.push({ tag: m[1], index: m.index, classes: [...new Set(classes)] })
+  }
+  return out
+}
+
+const SURFACE_PRIMS = { accent: ['alert', 'item'], card: ['card', 'item'], row: ['item', 'card'], badge: ['badge'], separator: ['separator'], skeleton: ['skeleton'] }
+const SURFACE_LABEL = { accent: 'a tinted/accented callout or row', card: 'a card', row: 'a list row', badge: 'a badge/chip', separator: 'a divider', skeleton: 'a loading placeholder' }
+const TONE = /^(destructive|danger|error|critical|warning|warn|caution|success|positive|info|notice|primary|red|orange|amber|yellow|green|emerald|lime|teal|cyan|sky|blue|rose|pink)(-\d{2,3})?$/
+/** Which primitive a set of classes imitates, or null. Only unprefixed classes count (hover:bg-… is an effect, not the surface). */
+function surfaceKind(tag, all, colors) {
+  const cls = all.filter((c) => !c.includes(':'))
+  const has = (re) => cls.some((c) => re.test(c))
+  const block = tag !== 'span' && tag !== 'p'
+  const rounded = has(/^rounded(-(sm|md|lg|xl|2xl|3xl|full))?$/)
+  const padded = has(/^(p|px|py|pl|pr|pt|pb)-(\d+(\.5)?|\[.+\])$/)
+  const tile = has(/^(size|h|w)-\d/) && !has(/^(w|h)-(full|auto|fit|px)$/) // icon squares, dots, avatars
+  const positioned = has(/^(absolute|fixed|sticky)$/)
+  const scroller = has(/^(overflow(-[xy])?-(auto|scroll|hidden)|divide-[xy])$/)
+  const tint = cls.map((c) => c.match(/^bg-([a-z][a-z-]*?)(?:-\d{2,3})?(?:\/\d+)?$/)?.[1]).filter(Boolean)
+  const toneBg = cls.some((c) => { const m = c.match(/^bg-([a-z][a-z0-9-]*?)(\/\d+)?$/); return m && TONE.test(m[1]) && (m[2] || /-\d{2,3}$/.test(m[1])) && !/-(foreground)$/.test(m[1]) })
+  const toneBorder = cls.some((c) => { const m = c.match(/^border(?:-[lrtbxyse])?-([a-z][a-z0-9-]*?)(\/\d+)?$/); return m && TONE.test(m[1]) })
+  if (has(/^animate-pulse$/) && tint.length) return 'skeleton'
+  if (positioned) return null // grid lines, stepper connectors, floating labels
+  if (has(/^(h-px|w-px|h-0\.5)$/) && (tint.length || has(/^bg-linear/))) return 'separator'
+  if (tile || has(/^border-dashed$/)) return null
+  if (!block || (has(/^rounded-full$/) && has(/^inline-flex$/))) {
+    if (rounded && has(/^px-(\d|\d\.5)$/) && has(/^text-(xs|sm|\[\d)/) && (tint.length || has(/^border$/))) return 'badge'
+    return null
+  }
+  if (!rounded || !padded) return null
+  if (has(/^border-l-(\d|\[)/) || toneBg || (toneBorder && has(/^border(-[lrtbxy])?$/))) return 'accent'
+  if (scroller) return null
+  const framed = has(/^border$/) || has(/^border-(border|input)$/) || has(/^shadow(-(xs|sm|md|lg|xl))?$/) || tint.some((t) => ['card', 'muted', 'background', 'popover', 'accent', 'secondary'].includes(t))
+  if (!framed) return null
+  return tag === 'li' ? 'row' : 'card'
+}
+
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(component|comp|custom|new|base|wrapper|ui|v\d+)$/g, '')
 
 /**
@@ -36,7 +118,9 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   const src = read(abs)
   if (!src) return []
   const out = []
-  const add = (rule, line, message) => state.rules[rule] && state.rules[rule] !== 'off' && out.push({ rule, severity: state.rules[rule], line, message })
+  const lines = src.split('\n')
+  const ignored = (rule, line) => [lines[line - 1], lines[line - 2]].some((l) => l && new RegExp(`aura-ignore\\s+${rule}\\b`).test(l))
+  const add = (rule, line, message) => state.rules[rule] && state.rules[rule] !== 'off' && !ignored(rule, line) && out.push({ rule, severity: state.rules[rule], line, message, key: findingKey(rule, message) })
   const relPath = ctx.rel(abs)
   // Inside the component's own package, use its local form (#components/x); elsewhere its public import.
   const importFrom = (c) => (c.importInPackage && c.package && ctx.packageOf(abs) === c.package ? c.importInPackage : c.import)
@@ -97,7 +181,17 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
       if (!prim) continue
       const hits = [...src.matchAll(new RegExp(`<${tag}\\b([^>]*)>`, 'g'))].filter((x) => !(tag === 'input' && /type=["'](hidden|file|checkbox|radio)["']/.test(x[1])))
       // one finding per occurrence, so the baseline can tell a new raw element from an old one
-      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.category === 'library' ? prim.import : prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${Object.keys(prim.variants ?? {}).length ? ` (variants: ${Object.entries(prim.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : ''}.`)
+      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.category === 'library' ? prim.import : prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${variantsOf(prim)}.`)
+    }
+
+    // hand-built-surface: a div/li/span styled into what Card, Item, Alert, Badge, Separator or Skeleton already is
+    for (const el of styledElements(code)) {
+      const kind = surfaceKind(el.tag, el.classes, colors)
+      if (!kind) continue
+      const want = SURFACE_PRIMS[kind].map((n) => prims.get(n)).filter(Boolean)
+      if (!want.length) continue
+      const use = want.map((p) => `${p.exports.slice(0, 5).join(' + ')} from "${importFrom(p)}"${variantsOf(p)}`).join(', or ')
+      add('hand-built-surface', lineOf(src, el.index), `<${el.tag}> styled as ${SURFACE_LABEL[kind]} ("${el.classes.slice(0, 6).join(' ')}${el.classes.length > 6 ? ' …' : ''}"). Use ${use}. If the look you need (a severity tone, an accent bar) isn't a variant yet, add it to the primitive with cva instead of styling a ${el.tag}. Intentional? Put "aura-ignore hand-built-surface: <why>" in a comment on the line above.`)
     }
   }
 
@@ -120,22 +214,30 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
  * Baseline: findings that existed when aura was added ({ [path]: { [rule]: count } }). Hooks block only
  * new violations, so editing an old file doesn't force unrelated fixes. Marks the first N per rule as existing.
  */
+/** What a finding is about, without where it is: the baseline matches on this, so reformatting a file keeps old findings old, and swapping an old violation for a different new one still blocks. */
+export const findingKey = (rule, message) => `${rule}:${message.replace(/\b\d+ files\b/g, 'N files').slice(0, 200)}`
 export function loadBaseline(ctx) {
   try { return JSON.parse(fs.readFileSync(path.join(ctx.auraDir, 'baseline.json'), 'utf8')).files ?? {} } catch { return {} }
 }
 export function applyBaseline(relPath, findings, baseline) {
-  const allowed = Object.fromEntries(Object.entries(baseline[relPath] ?? {}).map(([r, v]) => [r, typeof v === 'number' ? v : v.count]))
-  return findings.map((f) => (allowed[f.rule] > 0 ? (allowed[f.rule]--, { ...f, existing: true }) : f))
+  const entries = baseline[relPath] ?? {}
+  const keys = {}, counts = {}
+  for (const [rule, v] of Object.entries(entries)) {
+    if (v?.keys) for (const k of v.keys) keys[k] = (keys[k] ?? 0) + 1
+    else counts[rule] = typeof v === 'number' ? v : v.count // older baselines: count per rule
+  }
+  return findings.map((f) => (keys[f.key] > 0 ? (keys[f.key]--, { ...f, existing: true }) : counts[f.rule] > 0 ? (counts[f.rule]--, { ...f, existing: true }) : f))
 }
 export function snapshotBaseline(entries) {
   const files = {}
   for (const { file, findings } of entries)
     for (const f of findings) if (f.severity === 'error' || f.severity === 'warn') {
-      const e = ((files[file] ??= {})[f.rule] ??= { count: 0, lines: [] })
+      const e = ((files[file] ??= {})[f.rule] ??= { count: 0, lines: [], keys: [] })
       e.count++
       e.lines.push(f.line)
+      e.keys.push(f.key)
     }
-  return { $comment: 'Findings present when aura was added; hooks only block new ones (matched by count per file and rule; lines are where they were). List them: aura check --existing. Refresh: aura baseline', files }
+  return { $comment: 'Findings present when aura was added; hooks only block new ones (matched by what the finding is about, so moved lines stay old; lines are where they were). List them: aura check --existing. Refresh: aura baseline', rules: Object.keys(DEFAULT_RULES), pagesChecked: true, files }
 }
 
 export const hasErrors = (findings) => findings.some((f) => f.severity === 'error' && !f.existing)

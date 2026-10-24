@@ -84,9 +84,14 @@ export function analyseComponent(ctx, abs, src) {
     ...[...src.matchAll(/^export\s*\{([^}]*)\}/gm)].flatMap((m) => m[1].split(',').map((x) => x.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()).filter((x) => /^[A-Z]/.test(x))),
   ])]
   if (!exports.length) return null
+  // cva variants: the component's own cva (itemVariants for item.tsx) wins over helpers' (itemMediaVariants)
   const variants = {}
-  for (const v of src.matchAll(/variants:\s*\{([\s\S]*?)\n\s{2,4}\},?\n/g))
-    for (const g of v[1].matchAll(/^\s+(\w+):\s*\{([\s\S]*?)^\s+\},?/gm)) variants[g[1]] = [...g[2].matchAll(/^\s+['"]?([\w-]+)['"]?\s*:/gm)].map((x) => x[1])
+  const own = path.basename(abs).replace(/\.\w+$/, '').replace(/-(\w)/g, (_, c) => c.toUpperCase()) + 'Variants'
+  const cvas = [...src.matchAll(/const\s+(\w+)\s*=\s*cva\(/g)].map((m, i, all) => ({ name: m[1], text: src.slice(m.index, all[i + 1]?.index ?? src.length) }))
+  const parts = cvas.length ? [...cvas.filter((c) => c.name !== own), ...cvas.filter((c) => c.name === own)].map((c) => c.text) : [src]
+  for (const part of parts)
+    for (const v of part.matchAll(/variants:\s*\{([\s\S]*?)\n\s{2,4}\},?\n/g))
+      for (const g of v[1].matchAll(/^\s+(\w+):\s*\{([\s\S]*?)^\s+\},?/gm)) variants[g[1]] = [...g[2].matchAll(/^\s+['"]?([\w-]+)['"]?\s*:/gm)].map((x) => x[1])
   const doc = (src.match(/\/\*\*\s*\n?\s*\*?\s*([^*\n@][^\n]*)/) || [])[1]?.trim()
   const base = path.basename(abs).replace(/\.(tsx|jsx)$/, '')
   const name = base === 'index' || base === 'Component' ? path.basename(path.dirname(abs)) : base

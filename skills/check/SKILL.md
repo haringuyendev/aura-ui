@@ -1,6 +1,6 @@
 ---
 name: check
-description: Run and act on Aura's component rules - duplicate components, raw <button>/<input> when the project has the primitive, undefined color tokens, foreign UI libraries, raw colors, status colors used as text, missing alt or aria-label - and fix what they report, or tune rule severities. Use when an Aura hook blocks or notes an edit ("Aura blocked this change"), before finishing UI work, when the user asks to lint or check components, or to configure .aura/rules.json.
+description: Run and act on Aura's component rules - duplicate components, raw <button>/<input> when the project has the primitive, divs styled as Card/Item/Alert/Badge, primitives added without the user's approval, undefined color tokens, foreign UI libraries, raw colors, status colors used as text, missing alt or aria-label - and fix what they report, or tune rule severities. Use when an Aura hook blocks or notes an edit ("Aura blocked this change"), before finishing UI work, when the user asks to lint or check components, or to configure .aura/rules.json.
 ---
 
 # Aura check
@@ -17,23 +17,33 @@ node .aura/bin/aura.mjs check --json      # machine-readable
 Exit code 1 when there is a new error. The first line says what was checked. `[existing]` findings come
 from the baseline and don't block.
 
-These rules read source files. How the page looks once rendered (layout, emphasis, status colors,
-repeated content) is checked by `aura inspect` (`aura-ui:inspect`).
+These rules read source files: every UI file (pages, layouts and route files too), edited with Write/Edit or
+with a shell command (sed, heredocs, scripts are checked after the command runs). Classes in `cn()`, ternaries,
+and in maps or constants the className references (`LEVEL[x].accent`, `rowClass`) count. How the page looks once
+rendered is checked by `aura verify` / `aura inspect` (`aura-ui:inspect`).
 
 ## Fixing each rule
 | Rule | Default | Fix |
 |---|---|---|
 | `duplicate-component` | error | Delete the new copy and import the existing component the message names. If it lacks something, add a variant or prop to the existing one. |
 | `bypasses-primitive` | error | Replace the raw `<button>`/`<input>`/`<select>`/`<textarea>`/`<dialog>`/`<table>` with the project primitive the message names, using its variants. |
+| `hand-built-surface` | error | A `div`/`li`/`span` styled into a card, list row, tinted callout, chip, divider or skeleton. Use the primitive the message names (Card, Item, Alert, Badge, Separator, Skeleton). If the look you need (severity tone, accent bar) is missing, add a variant to that primitive with cva rather than styling the element. Truly not that thing (a dropzone, a selection toolbar)? Comment `aura-ignore hand-built-surface: <why>` on the line above or inside the tag. |
 | `undefined-token` | error | Use one of the existing tokens listed in the message. If a new color is really needed, add the variable in the token file for light **and** dark and register it in `@theme` (`--color-<name>`), then use it. |
 | `foreign-ui-library` | error | Remove the import; build it from the project's components (`aura-ui:find`). |
 | `raw-color` | warn | Replace palette/hex/white/black classes with semantic tokens. |
 | `status-text-unsafe` | warn | Use the text-safe token the message names, or a tint with `text-foreground`. |
 | `img-alt`, `icon-button-label` | warn | Add `alt` (empty `alt=""` only for decoration) / `aria-label`. |
 | `undescribed-component` | info | Describe it with the `aura-ui:describe` skill. |
+| new primitive without approval | blocks | A file appeared in the primitives folder through a shell command, not `aura add`. Delete it and reuse a component (`aura find`), or ask the user and add a standard one with `aura add <name>`. A new primitive written with Write goes through a permission prompt. |
 
-After fixing, run `check` on the file again. The stop hook re-checks every file you touched in the session
-and won't let you finish with new errors or undescribed new components.
+After fixing, run `check` on the file again. The Stop hook (SubagentStop for a subagent) re-checks every file
+touched in the session and won't let you finish with new errors, unapproved primitives, undescribed new
+components, or UI that `aura verify` hasn't passed. After a few reminders it lets the agent stop but tells the
+user what is left.
+
+The baseline matches old findings by what they are about (the element, class or tag), not by count or line:
+reformatting a file keeps them old, replacing an old violation with a different new one blocks.
+An intentional exception: a comment `aura-ignore <rule>: <why>` on the line above or inside the tag.
 
 In a monorepo, a message names the import to use from where the file is: the package's public path from
 an app (`@acme/ui/components/button`), its local path inside that package (`#components/button`).

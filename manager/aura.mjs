@@ -2,11 +2,18 @@
 // Aura: the project's component UI manager.
 //   aura init [--scripts]          scan the repo (a monorepo from its root), create .aura/, vendor the CLI; re-run to refresh bin/
 //   aura find <need…>               components in this project that fit ("ô nhập liệu", "date range", "confirm dialog")
+//   aura add <name…>                add primitives with shadcn (only after the user agreed; the hook asks them), then register them
+//   aura scaffold <dashboard|list|detail|form> <file.tsx> [--name X]   write a page skeleton from the project's components
+//   aura snippet <name> [--for file] import line, variants and real usages of a component
+//   aura variant <Component> <name> [--tone t] [--classes "…"] [--write]   add a cva variant to a primitive (instead of styling a div)
 //   aura show <name>                props, variants, description, import path(s), where it is used
 //   aura usage <name>               files that import it
 //   aura tokens                     colors, fonts, radius, status/chart tokens (and which are text-safe)
 //   aura status                     project summary (what agents get at session start)
 //   aura check [files…] [--changed] [--existing] [--json]   run the rules; exit 1 on new errors
+//   aura verify [/path…] [--base url] [--files a,b] [--skip-inspect "why"] [--accept rule --reason "why"]
+//                                   the check before saying UI work is done: check the changed files + inspect the pages
+//                                   that render them (found through imports and the router); the Stop hook requires it
 //   aura inspect <url> [/path…] [--widths 1440,768,390] [--shot] [--json]   open the pages headless and report
 //                                   layout, KPI emphasis, data color, repeated content and button problems as text
 //   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
@@ -15,23 +22,27 @@
 //   aura describe --from <file.json> describe many at once: [{ name, summary, use_when, avoid_when, keywords, example }]
 //   aura baseline                   accept current findings as existing (hooks then block only new ones)
 //   aura scan                       full rescan (normally not needed: every command refreshes incrementally)
-//   aura hook <session-start|post-edit|post-bash|stop|skill-nudge>   called by agent hooks with the event JSON on stdin
+//   aura hook <session-start|pre-tool|post-edit|post-bash|stop|subagent-stop|skill-nudge>   called by agent hooks with the event JSON on stdin
 import fs from 'node:fs'
 import path from 'node:path'
 import { execSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { createContext, workspaceDirs } from './context.mjs'
 import { files, isInitialised, loadProfile, refresh } from './registry.mjs'
+const readRegistry = (ctx) => { try { return JSON.parse(fs.readFileSync(files(ctx).registry, 'utf8')) } catch { return { components: [] } } }
 import { DEFAULT_RULES, applyBaseline, checkFile, formatFindings, hasErrors, loadBaseline, loadRules, snapshotBaseline } from './check.mjs'
 import { findComponents, formatComponent } from './find.mjs'
 import { formatReport, inspect, resolveUrls } from './inspect.mjs'
+import { SHADCN, addCommand, addsPrimitives, hasComponent, installNames } from './primitives.mjs'
+import { loadVerify, verifiedClean, verify } from './verify.mjs'
+import { SCAFFOLDS, addVariant, scaffold, snippet } from './scaffold.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const cmd = argv[0]
 const flag = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined }
 const has = (name) => argv.includes(`--${name}`)
-const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full', '--shot'].includes(all[i - 1])))
+const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full', '--shot', '--dry-run', '--write', '--force'].includes(all[i - 1])))
 
 /** The nearest folder with .aura/ going up; else the monorepo root (package.json workspaces); else the nearest package.json. */
 function findRepoRoot(start) {
@@ -52,7 +63,7 @@ function summary(ctx, profile, registry) {
   const top = registry.components.filter((c) => c.category !== 'section').slice(0, 14).map((c) => `${c.name}(${c.usedBy})`).join(', ')
   return [
     `Aura manages UI components in this repo (${p.repo}). Ask it instead of scanning component folders:`,
-    `  node .aura/bin/aura.mjs find "<what you need>"   ·   show <Name>   ·   tokens   ·   check <file>   ·   inspect <url>`,
+    `  node .aura/bin/aura.mjs find "<what you need>"   ·   snippet <Name>   ·   scaffold <kind> <file>   ·   variant <Component> <name>   ·   add <name>   ·   verify   ·   tokens`,
     `Stack: ${list(p.stack.framework)} · ${list(p.stack.styling)} · UI: ${list(p.stack.ui)} · icons: ${list(p.stack.icons)}${p.stack.cms ? ` · CMS: ${list(p.stack.cms)}` : ''}`,
     `Tokens: ${list([...p.tokens.files, ...(p.tokens.tailwindConfigs ?? [])])}${p.tokens.themeFiles?.length ? ` · theme in code: ${p.tokens.themeFiles.join(', ')} (style through the library's theme props/tokens, not classes)` : ''} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
     p.workspaces?.length ? `Monorepo: ${p.workspaces.length} packages (${p.workspaces.map((w) => w.dir).join(', ')}). Import a package's components by its public path (e.g. "${registry.components.find((c) => c.package && c.importInPackage)?.import ?? '@scope/ui/components/button'}"); inside that package use its local path (show prints both).` : '',
@@ -61,8 +72,9 @@ function summary(ctx, profile, registry) {
       : `Components (${registry.components.length}): ${p.components.uiDir ? `${p.components.primitives.length} primitives in ${p.components.uiDir}` : registry.library?.length ? 'primitives come from the UI library (below)' : 'no primitives folder (see aura doctor)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
     registry.library?.length ? `UI library components in use (the project's primitives too; import from the library): ${registry.library.slice(0, 16).map((c) => `${c.name}(${c.usedBy})`).join(', ')} — from ${[...new Set(registry.library.map((c) => c.import.split('/').slice(0, c.import.startsWith('@') ? 2 : 1).join('/')))].join(', ')}` : '',
     p.conventions.length ? `Conventions: ${p.conventions.join(' · ')}` : '',
-    `Rules: reuse existing components (duplicates are blocked), only defined color tokens, no second UI library; after creating a component, describe it with "aura describe".`,
-    `Skills: aura-ui:find (pick components) · aura-ui:check (when a hook blocks) · aura-ui:describe · aura-ui:build (design rules).`,
+    `Workflow for UI work: 1) aura find / aura snippet to pick components; a MISSING primitive → ask the user, then aura add <name> (never hand-build it from divs) · 2) start pages from aura scaffold <dashboard|list|detail|form> <file> · 3) a look a primitive lacks (severity tone, accent) → aura variant <Component> <name> · 4) before saying done: aura verify (checks changed files, inspects the pages that render them) until it prints ✓ verified.`,
+    `Enforced by hooks: edits (Write/Edit and shell) are checked — duplicates, raw HTML controls, divs styled as Card/Item/Alert/Badge, undefined color tokens, foreign UI libraries are blocked; new primitives need the user's approval; the agent can't finish until aura verify passes for what it changed. New components must be described (aura describe).`,
+    `Skills: aura-ui:build (design rules) · aura-ui:find (components, adding primitives) · aura-ui:inspect (aura verify / inspect) · aura-ui:check (when a hook blocks) · aura-ui:describe.`,
   ].filter(Boolean).join('\n')
 }
 
@@ -104,7 +116,44 @@ function doctor(ctx, r) {
   return notes
 }
 
-function state(ctx, r) {
+// Rules a baseline without a "rules" list was taken with (before 1.5).
+const LEGACY_RULES = Object.keys(DEFAULT_RULES).filter((k) => k !== 'hand-built-surface')
+/**
+ * Keep an older baseline working with this version, once: a rule added after it was taken would block every old
+ * occurrence the moment a file is edited, so its current findings are accepted; count-only entries get the keys
+ * of the findings they stand for, so later matching is by content.
+ */
+function upgradeBaseline(ctx, r) {
+  let json
+  try { json = JSON.parse(fs.readFileSync(files(ctx).baseline, 'utf8')) } catch { return }
+  json.files ??= {}
+  const missing = Object.keys(DEFAULT_RULES).filter((k) => !(json.rules ?? LEGACY_RULES).includes(k))
+  const keyless = Object.values(json.files).some((byRule) => Object.values(byRule).some((v) => !v?.keys))
+  // Before 1.5 pages/layouts/route files weren't checked: their current findings are old too.
+  const pagesNew = !json.pagesChecked
+  if (!missing.length && !keyless && !pagesNew) return
+  const st = { ...state(ctx, r, false), baseline: {} }
+  for (const p of r.uiFiles) {
+    const entry = json.files[p]
+    const routeFile = pagesNew && ctx.isRouteFile(path.join(ctx.repo, p))
+    if (!missing.length && !entry && !routeFile) continue
+    const found = checkFile(ctx, st, path.join(ctx.repo, p)).filter((f) => f.severity === 'error' || f.severity === 'warn')
+    for (const rule of new Set(found.map((f) => f.rule))) {
+      const mine = found.filter((f) => f.rule === rule)
+      const old = entry?.[rule]
+      const take = routeFile || missing.includes(rule) ? mine : old && !old.keys ? mine.slice(0, typeof old === 'number' ? old : old.count) : []
+      if (take.length) ((json.files[p] ??= {})[rule] = { count: take.length, lines: take.map((f) => f.line), keys: take.map((f) => f.key) })
+    }
+    // count-only entries whose findings are gone
+    for (const [rule, v] of Object.entries(json.files[p] ?? {})) if (!v?.keys) delete json.files[p][rule]
+  }
+  json.rules = Object.keys(DEFAULT_RULES)
+  json.pagesChecked = true
+  fs.writeFileSync(files(ctx).baseline, JSON.stringify(json, null, 2) + '\n')
+}
+
+function state(ctx, r, upgrade = true) {
+  if (upgrade) upgradeBaseline(ctx, r)
   return { registry: r.registry, tokens: r.tokens, rules: loadRules(ctx), profile: loadProfile(ctx), baseline: loadBaseline(ctx), allow: ctx.config.allowUiLibraries ?? [] }
 }
 /** Check a file and mark findings that were already there when aura was added. */
@@ -112,7 +161,7 @@ function checkWithBaseline(ctx, st, abs, opts) {
   return applyBaseline(ctx.rel(abs), checkFile(ctx, st, abs, opts), st.baseline)
 }
 function writeBaseline(ctx, r) {
-  const st = { ...state(ctx, r), baseline: {} }
+  const st = { ...state(ctx, r, false), baseline: {} }
   const entries = r.uiFiles.map((p) => ({ file: p, findings: checkFile(ctx, st, path.join(ctx.repo, p)) }))
   const snap = snapshotBaseline(entries)
   fs.writeFileSync(files(ctx).baseline, JSON.stringify(snap, null, 2) + '\n')
@@ -141,7 +190,7 @@ async function main() {
     const r = refresh(ctx, { full: true })
     const f = files(ctx)
     if (!fs.existsSync(f.rules)) fs.writeFileSync(f.rules, JSON.stringify({
-      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy), inspect ({ baseUrl, widths, storageState, nudge, kpiRatio, minDataColor, repeatSections, maxKpis, tapTarget } for aura inspect; its rules go in "rules" too)',
+      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy), inspect ({ baseUrl (a URL, or { "apps/web": url } per app), widths, storageState, kpiRatio, minDataColor, repeatSections, maxKpis, tapTarget } for aura inspect/verify; its rules go in "rules" too), verify ({ mode: "required" (Stop hook needs aura verify) | "off", maxPages, maxStopBlocks })',
       rules: DEFAULT_RULES,
       allowUiLibraries: [],
     }, null, 2) + '\n')
@@ -201,22 +250,85 @@ async function main() {
     console.log(summary(ctx, loadProfile(ctx), r.registry))
     const { added, removed, updated, moved } = r.changes
     if (added.length + removed.length + updated.length + moved.length) console.log(`\nChanges since last scan: +${added.length} −${removed.length} ~${updated.length} moved ${moved.length}`)
+    // Primitive health: what nobody uses and what agents can't find yet.
+    const prims = r.registry.components.filter((c) => c.category === 'primitive')
+    const unused = prims.filter((c) => !c.usedBy), undescribed = prims.filter((c) => !c.described)
+    if (prims.length) console.log(`\nPrimitives: ${prims.length}${unused.length ? ` · unused (${unused.length}): ${unused.map((c) => c.name).join(', ')}` : ''}${undescribed.length ? ` · no description (${undescribed.length}): ${undescribed.slice(0, 12).map((c) => c.name).join(', ')}${undescribed.length > 12 ? ', …' : ''} (aura-ui:describe)` : ''}`)
   } else if (cmd === 'find') {
     const q = positional.join(' ')
     if (!q) return console.error('usage: aura find <what you need>')
     const { results, aura } = findComponents({ components: everything }, q)
     if (!results.length) console.log(`No component in this project matches "${q}".`)
     for (const { component, why } of results) console.log(formatComponent(component) + (why.length ? `\n  (${why.join(', ')})` : ''))
-    if (aura.length) {
-      // Add-ons install into apps made from the aura starter (Base UI blocks at src/components/blocks); elsewhere they are a reference.
+    // Catalog matches the project doesn't have: primitives are proposed to the user (aura add asks them), blocks are composed, add-ons installed.
+    const missing = aura.filter((a) => !hasComponent(everything, a.name))
+    if (missing.length) {
       const starterApp = r.registry.components.some((c) => c.name === 'data-table' && /components\/blocks\//.test(c.path))
       const installer = path.join(here, '..', 'scripts', 'add-block.mjs')
-      const addCmd = (name) => `node ${fs.existsSync(installer) ? JSON.stringify(installer) : '"${CLAUDE_PLUGIN_ROOT}/scripts/add-block.mjs"'} ${name} .`
-      const lines = aura.map((a) => a.kind === 'addon' && starterApp
-        ? `${a.name}: aura add-on, install with: ${addCmd((a.install ?? '').match(/add-block\.mjs (\S+)/)?.[1] ?? a.name)}`
-        : `${a.name} (${a.summary.split('.')[0]})${a.kind === 'addon' ? ' [aura add-on for starter apps; port it to this project\'s primitives]' : ''}`)
-      console.log(`\nNot in the project? ${starterApp ? '' : "Aura reference to build it in this project's style: "}\n  ${lines.join('\n  ')}`)
-    }
+      const addBlock = (name) => `node ${fs.existsSync(installer) ? JSON.stringify(installer) : '"${CLAUDE_PLUGIN_ROOT}/scripts/add-block.mjs"'} ${name} .`
+      const lines = missing.map((a) => {
+        const names = installNames(a.name)
+        if (a.kind === 'addon') return starterApp ? `${a.name}: aura add-on, install with: ${addBlock((a.install ?? '').match(/add-block\.mjs (\S+)/)?.[1] ?? a.name)}` : `${a.name} (${a.summary.split('.')[0]}) [aura add-on for starter apps; port it to this project's primitives]`
+        if (a.kind === 'block' && !(names && results.length === 0)) return `${a.name} (${a.summary.split('.')[0]}) [aura block: compose it from the project's primitives${starterApp ? `; install: ${addBlock(a.name)}` : ''}]`
+        if (!names) return `${a.name} (${a.summary.split('.')[0]}) [not in this project and not installable automatically: propose to the user how to add it]`
+        const add = addCommand(ctx, names.filter((n) => !hasComponent(everything, n)))
+        return `${a.name} (${a.summary.split('.')[0]}): MISSING PRIMITIVE. Ask the user first, then: node .aura/bin/aura.mjs add ${names.join(' ')}${add ? ` (runs ${add.text})` : ' (no shadcn components.json here: propose to the user how to add it)'}`
+      })
+      console.log(`\nNot in the project:\n  ${lines.join('\n  ')}`)
+      if (missing.some((a) => installNames(a.name) && a.kind !== 'addon')) console.log('Don\'t hand-build a missing primitive from divs. Ask the user whether to add it; if they decline, compose from what exists and say so.')
+    } else if (!results.length) console.log('Nothing in the project or the aura catalog fits. Propose a new primitive to the user before building one.')
+  } else if (cmd === 'add') {
+    // Install primitives the user approved (the PreToolUse hook asks them), then register them.
+    const names = positional.filter((n) => !hasComponent(everything, n))
+    const skipped = positional.filter((n) => hasComponent(everything, n))
+    if (!positional.length) return console.error('usage: aura add <name…>   (shadcn registry names, e.g. calendar popover; aura find prints them)')
+    if (skipped.length) console.log(`Already in the project: ${skipped.join(', ')} (aura show <name>)`)
+    if (!names.length) return
+    const unknown = names.filter((n) => !SHADCN.has(n))
+    const command = addCommand(ctx, names)
+    if (!command) return console.error(`aura add: no shadcn components.json in ${ctx.rel(ctx.uiDir ?? ctx.repo) || '.'}; add ${names.join(', ')} the way this project adds UI components, after the user agrees.`), process.exit(1)
+    if (unknown.length) console.log(`Note: ${unknown.join(', ')} ${unknown.length > 1 ? 'are' : 'is'} not a known shadcn item; trying anyway.`)
+    if (has('dry-run')) return console.log(command.text)
+    console.log(`$ ${command.text}`)
+    const res = spawnSync(command.argv[0], command.argv.slice(1), { cwd: command.dir, stdio: 'inherit' })
+    if (res.status !== 0) return console.error(`aura add: the shadcn command failed (exit ${res.status ?? res.error?.message}).`), process.exit(1)
+    const after = refresh(ctx)
+    const added = after.changes.added
+    console.log(added.length ? `Added: ${added.join(', ')}. Describe each one: node .aura/bin/aura.mjs describe <Name> --summary "…" --use "…" --keywords "vi, en"` : 'No new primitive files appeared (already installed, or the registry item has another name).')
+  } else if (cmd === 'scaffold') {
+    const [kind, out] = positional
+    if (!SCAFFOLDS.includes(kind) || !out) return console.error(`usage: aura scaffold <${SCAFFOLDS.join('|')}> <file.tsx> [--name Orders] [--force]`), process.exit(2)
+    const abs = path.resolve(out)
+    if (!/\.(tsx|jsx)$/.test(abs)) return console.error('aura scaffold writes React (.tsx/.jsx) pages.'), process.exit(2)
+    if (fs.existsSync(abs) && !has('force')) return console.error(`aura scaffold: ${ctx.rel(abs)} exists (--force to overwrite).`), process.exit(2)
+    const res = scaffold(ctx, { comps: everything, tokens: r.tokens }, kind, abs, flag('name'))
+    fs.mkdirSync(path.dirname(abs), { recursive: true })
+    fs.writeFileSync(abs, res.code)
+    const after = refresh(ctx)
+    const findings = checkWithBaseline(ctx, state(ctx, after), abs, { isNew: true }).filter((f) => !f.existing)
+    console.log(`Wrote ${ctx.rel(abs)}: ${kind} skeleton exporting ${res.Name}, built from the project's ${[...new Set(res.code.match(/from "[^"]+"/g) ?? [])].length} component module(s).`)
+    if (res.missing.length) console.log(`Not in the project (left as TODO): ${res.missing.join(', ')}. aura find shows how to add them; ask the user first.`)
+    for (const n of res.notes) console.log(`Note: ${n}`)
+    if (findings.length) console.log(formatFindings(ctx.rel(abs), findings))
+    console.log(`Next: wire it to a route, replace the sample data and TODO text (keep the structure: what needs action first, one STATUS map, key numbers emphasized), then run: node .aura/bin/aura.mjs verify`)
+  } else if (cmd === 'snippet') {
+    const c = byName(positional[0] ?? '')
+    if (!c) return console.log(`Unknown component "${positional[0]}". Try: aura find ${positional[0] ?? ''}`)
+    console.log(snippet(ctx, c, flag('for') ? path.resolve(flag('for')) : null))
+  } else if (cmd === 'variant') {
+    const [compName, name] = positional
+    const c = compName && byName(compName)
+    if (!c || !name) return console.error('usage: aura variant <Component> <name> [--tone destructive|warning|success|info] [--classes "…"] [--prop variant] [--write]'), process.exit(2)
+    if (c.category === 'library') return console.error(`aura variant: ${c.name} comes from ${c.import}; extend it through the library's theme instead.`), process.exit(2)
+    let res
+    try { res = addVariant(ctx, c, r.tokens, { name, tone: flag('tone'), classes: flag('classes'), prop: flag('prop') }) } catch (e) { return console.error(`aura variant: ${e.message}`), process.exit(1) }
+    const line = res.after.split('\n').findIndex((l, i) => l !== res.src.split('\n')[i])
+    console.log(`${has('write') ? 'Added' : 'Would add'} to ${res.cva} in ${c.path}:\n${res.after.split('\n').slice(line, line + 3).map((l) => '+ ' + l).join('\n')}\nUse: ${res.usage}`)
+    if (!has('write')) return console.log('Re-run with --write to apply (it changes a shared primitive: mention it to the user).')
+    fs.writeFileSync(res.file, res.after)
+    refresh(ctx)
+    const findings = checkWithBaseline(ctx, state(ctx, refresh(ctx)), res.file).filter((f) => !f.existing)
+    if (findings.length) console.log(formatFindings(c.path, findings))
   } else if (cmd === 'show') {
     const c = byName(positional[0] ?? '')
     console.log(c ? formatComponent(c, { detail: true }) : `Unknown component "${positional[0]}". Try: aura find ${positional[0] ?? ''}`)
@@ -235,7 +347,7 @@ async function main() {
     console.log(`Chart tokens: ${t.chartTokens}/5${t.customUtilities.length ? ` · custom utilities: ${t.customUtilities.join(', ')}` : ''}`)
   } else if (cmd === 'check' || cmd === 'stats') {
     const scope = has('changed') ? 'changed files (git status)' : positional.length ? positional.join(', ') : `all ${r.uiFiles.length} UI files`
-    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx', '.vue', '.svelte']) : [p])) : r.uiFiles.map((p) => path.join(ctx.repo, p))).filter((t) => ctx.isComponentPath(t))
+    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx', '.vue', '.svelte']) : [p])) : r.uiFiles.map((p) => path.join(ctx.repo, p))).filter((t) => ctx.isUiPath(t))
     const st = state(ctx, r)
     const all = targets.map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) || r.changes.newFiles.includes(ctx.rel(t)) }) }))
     if (cmd === 'stats') {
@@ -259,6 +371,29 @@ async function main() {
       console.log(report.length ? report.map((x) => formatFindings(x.file, x.findings)).join('\n') : 'no findings')
     }
     if (report.some((x) => hasErrors(x.findings))) process.exitCode = 1
+  } else if (cmd === 'verify') {
+    if (flag('accept') && !flag('reason')) return console.error('aura verify: --accept needs --reason "<why the finding is wrong for this page>" (it is shown to the user).'), process.exit(2)
+    // Changed = git status + what agent sessions of the last 12 hours touched (shell edits, already-committed work, no git).
+    const recent = fs.existsSync(path.join(ctx.auraDir, 'cache')) ? fs.readdirSync(path.join(ctx.auraDir, 'cache')).filter((f) => /^session-.*\.json$/.test(f)).map((f) => path.join(ctx.auraDir, 'cache', f)).filter((f) => Date.now() - fs.statSync(f).mtimeMs < 12 * 3600e3) : []
+    const touched = recent.flatMap((f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')).touched ?? [] } catch { return [] } }).map((p) => path.join(ctx.repo, p))
+    const list = flag('files') ? flag('files').split(',').map((f) => path.resolve(f.trim())) : [...new Set([...changedFiles(ctx), ...touched])]
+    const targets = list.filter((t) => fs.existsSync(t) && ctx.isUiPath(t))
+    const st = state(ctx, r)
+    const index = JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files
+    const res = await verify(ctx, { st, index, check: (abs) => checkWithBaseline(ctx, st, abs, { isNew: r.changes.added.includes(ctx.rel(abs)) || r.changes.newFiles.includes(ctx.rel(abs)) }) }, {
+      files: targets,
+      paths: positional,
+      base: flag('base'),
+      widths: flag('widths')?.split(',').map(Number).filter(Boolean),
+      wait: flag('wait') ? Number(flag('wait')) : undefined,
+      storageState: flag('storage'),
+      maxPages: flag('max-pages') ? Number(flag('max-pages')) : undefined,
+      skipInspect: flag('skip-inspect'),
+      accept: flag('accept')?.split(',').map((x) => x.trim()).filter(Boolean),
+      reason: flag('reason'),
+    })
+    console.log(res.text)
+    if (!res.ok) process.exitCode = 1
   } else if (cmd === 'baseline') {
     console.log(`Baseline updated: ${writeBaseline(ctx, r)} finding(s) accepted as existing.`)
   } else if (cmd === 'describe' && flag('from')) {
@@ -302,28 +437,6 @@ async function main() {
 }
 
 // ---------------- agent hooks ----------------
-/** A running dev server for the touched files' package: inspect.baseUrl, else ports from its vite/next config and scripts, else common defaults. */
-async function devServer(ctx, touched) {
-  if (ctx.config.inspect?.baseUrl) return ctx.config.inspect.baseUrl.replace(/\/$/, '')
-  const ports = new Set()
-  for (const file of touched.slice(0, 5)) {
-    let dir = path.dirname(path.join(ctx.repo, file))
-    while (dir.startsWith(ctx.repo) && !fs.existsSync(path.join(dir, 'package.json'))) dir = path.dirname(dir)
-    for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => /^(vite|next|nuxt|astro|svelte)\.config\.|^package\.json$/.test(x)) : []) {
-      const src = fs.readFileSync(path.join(dir, f), 'utf8')
-      for (const m of src.matchAll(/(?:\bport\s*:\s*|--port[= ]|\s-p\s+)(\d{4,5})/g)) ports.add(+m[1])
-    }
-  }
-  for (const p of [5173, 3000, 8080, 4321]) ports.add(p)
-  for (const port of ports) {
-    try {
-      const res = await fetch(`http://localhost:${port}/`, { signal: AbortSignal.timeout(400) })
-      if (res.status < 500) return `http://localhost:${port}`
-    } catch {}
-  }
-  return null
-}
-
 async function readStdin() {
   if (process.stdin.isTTY) return {}
   let data = ''
@@ -331,11 +444,14 @@ async function readStdin() {
   try { return JSON.parse(data || '{}') } catch { return {} }
 }
 
+const json = (o) => process.stdout.write(JSON.stringify(o))
+const inDir = (abs, dir) => !!dir && abs.startsWith(dir + path.sep)
+
 async function hook(event) {
   const input = await readStdin()
-  // post-edit resolves from the edited file, so a nested .aura/ (or a monorepo root) is found from any package.
+  // post-edit/pre-tool resolve from the edited file, so a nested .aura/ (or a monorepo root) is found from any package.
   const target = input.tool_input?.file_path ? path.resolve(input.cwd ?? process.cwd(), input.tool_input.file_path) : null
-  const root = event === 'post-edit' && target ? path.dirname(target) : process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd()
+  const root = (event === 'post-edit' || event === 'pre-tool') && target ? path.dirname(target) : process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd()
   const ctx = createContext(findRepoRoot(root))
   // "cli": "local" in .aura/rules.json: run the repo's vendored copy (local patches) instead of this one.
   const localCli = path.join(ctx.auraDir, 'bin', 'aura.mjs')
@@ -345,7 +461,7 @@ async function hook(event) {
     process.stderr.write(res.stderr ?? '')
     process.exit(res.status ?? 0)
   }
-  const emit = (eventName, text) => text && process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: eventName, additionalContext: text.slice(0, 9500) } }))
+  const emit = (eventName, text) => text && json({ hookSpecificOutput: { hookEventName: eventName, additionalContext: text.slice(0, 9500) } })
   if (event === 'skill-nudge') {
     // Skill-scoped (once): when an aura skill edits files in a UI repo that isn't managed yet, suggest init.
     const ui = ['react', 'next', 'vue', 'svelte', '@angular/core', 'solid-js', 'preact'].some((d) => ctx.deps[d])
@@ -354,35 +470,80 @@ async function hook(event) {
     return emit('PostToolUse', `Aura: this repo (${path.basename(ctx.repo)}) has no .aura/ registry, so components aren't indexed and edits aren't checked (duplicates, raw primitives, undefined tokens). Offer the user the aura-ui:init skill (node "${cli}" init): one read-only scan that writes .aura/ and enables the checks. Don't run it without asking.`)
   }
   if (!isInitialised(ctx)) return // not an aura-managed repo: stay silent
+
+  // Session state: files touched (by Write/Edit and by shell commands), per subagent too.
   const sessionFile = path.join(ctx.auraDir, 'cache', `session-${String(input.session_id ?? 'default').replace(/[^\w-]/g, '')}.json`)
-  const session = (() => { try { return JSON.parse(fs.readFileSync(sessionFile, 'utf8')) } catch { return { touched: [], added: [] } } })()
+  const session = (() => { try { return JSON.parse(fs.readFileSync(sessionFile, 'utf8')) } catch { return {} } })()
+  session.touched ??= []; session.added ??= []; session.primitives ??= []; session.unapproved ??= []; session.agents ??= {}
   const saveSession = () => { fs.mkdirSync(path.dirname(sessionFile), { recursive: true }); fs.writeFileSync(sessionFile, JSON.stringify(session)) }
+  const agent = input.agent_id ? (session.agents[input.agent_id] ??= { touched: [] }) : null
+  const touch = (rel) => {
+    if (!session.touched.includes(rel)) session.touched.push(rel)
+    if (agent && !agent.touched.includes(rel)) agent.touched.push(rel)
+  }
+  const uiRel = ctx.uiDir ? ctx.rel(ctx.uiDir) : null
 
   if (event === 'session-start') {
     const r = refresh(ctx)
+    session.startedAt ??= Date.now()
+    saveSession()
     const { added, removed } = r.changes
     const note = added.length || removed.length ? `\nSince the last session: ${added.length ? `added ${added.join(', ')}` : ''}${added.length && removed.length ? '; ' : ''}${removed.length ? `removed ${removed.join(', ')}` : ''}.` : ''
     return emit('SessionStart', summary(ctx, loadProfile(ctx), r.registry) + note)
   }
 
+  if (event === 'pre-tool') {
+    // Adding a primitive changes the shared UI kit: the user decides (permission prompt).
+    const names = input.tool_name === 'Bash' ? addsPrimitives(input.tool_input?.command) : null
+    const have = names && [...readRegistry(ctx).components, ...(readRegistry(ctx).library ?? [])]
+    const fresh = names?.filter((n) => !hasComponent(have, n)) ?? []
+    if (fresh.length) return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: `Aura: the agent wants to add primitive(s) ${fresh.join(', ')} to ${uiRel ?? 'the UI kit'} (shared by every screen). Approve only if you want them in the project.` } })
+    if (input.tool_name === 'Write' && target && inDir(target, ctx.uiDir) && !fs.existsSync(target) && /\.(tsx|jsx|vue|svelte)$/.test(target))
+      return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: `Aura: the agent wants to create a new primitive ${ctx.rel(target)} in the shared UI kit. Approve, or deny and ask it to reuse an existing component (aura find) or add a standard one (aura add).` } })
+    return
+  }
+
   if (event === 'post-bash') {
-    if (/aura(\.mjs)?["']?\s+inspect\b/.test(input.tool_input?.command ?? '')) session.inspected = true
+    const command = input.tool_input?.command ?? ''
+    // Files the command changed: compare the index before and after the refresh (catches sed, heredocs, scripts, codegen).
+    const before = (() => { try { return JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files } catch { return {} } })()
     const r = refresh(ctx)
+    const after = (() => { try { return JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files } catch { return {} } })()
+    const changed = Object.keys(after).filter((p) => !before[p] || before[p].mtime !== after[p].mtime).filter((p) => ctx.isUiPath(path.join(ctx.repo, p)))
+    for (const p of changed) touch(p)
+    for (const a of [...r.changes.added, ...r.changes.newFiles]) if (!session.added.includes(a)) session.added.push(a)
+    // New primitives: through aura add / shadcn add they were approved by the user (pre-tool asks); otherwise flag them.
+    const newPrims = [...new Set([...r.changes.added, ...r.changes.newFiles])].filter((p) => uiRel && p.startsWith(uiRel + '/'))
+    const viaAdd = !!addsPrimitives(command)
+    for (const p of newPrims) {
+      if (viaAdd) { if (!session.primitives.includes(p)) session.primitives.push(p) }
+      else if (!session.unapproved.includes(p)) session.unapproved.push(p)
+    }
+    saveSession()
+    const notes = []
     const { added, removed, moved } = r.changes
-    if (added.length || removed.length || moved.length)
-      emit('PostToolUse', `Aura registry updated: ${[added.length && `added ${added.join(', ')}`, removed.length && `removed ${removed.join(', ')}`, moved.length && `moved ${moved.map(([a, b]) => `${a} → ${b}`).join(', ')}`].filter(Boolean).join('; ')}.`)
-    for (const a of [...added, ...r.changes.newFiles]) if (!session.added.includes(a)) session.added.push(a)
-    return saveSession()
+    if (added.length || removed.length || moved.length) notes.push(`Aura registry updated: ${[added.length && `added ${added.join(', ')}`, removed.length && `removed ${removed.join(', ')}`, moved.length && `moved ${moved.map(([a, b]) => `${a} → ${b}`).join(', ')}`].filter(Boolean).join('; ')}.`)
+    const st = changed.length ? state(ctx, r) : null
+    const errors = changed.flatMap((p) => { const abs = path.join(ctx.repo, p); return fs.existsSync(abs) ? checkWithBaseline(ctx, st, abs, { isNew: session.added.includes(p) }).filter((f) => f.severity === 'error' && !f.existing).map((f) => formatFindings(p, [f])) : [] })
+    const rogue = newPrims.filter((p) => !viaAdd)
+    if (rogue.length || errors.length) return json({ decision: 'block', reason: [
+      rogue.length && `Aura: ${rogue.join(', ')} ${rogue.length > 1 ? 'are new primitives' : 'is a new primitive'} created without the user's approval. Delete ${rogue.length > 1 ? 'them' : 'it'} and use an existing component (aura find), or ask the user and add a standard one with: node .aura/bin/aura.mjs add <name> (it asks them).`,
+      errors.length && `Aura: files changed by that command have errors (shell edits are checked like Write/Edit):\n${errors.join('\n')}`,
+      ...notes,
+    ].filter(Boolean).join('\n') })
+    return emit('PostToolUse', notes.join('\n'))
   }
 
   if (event === 'post-edit') {
     if (!target || !target.startsWith(ctx.repo + path.sep)) return
-    const isComp = ctx.isComponentPath(target), isToken = ctx.isTokenPath(target)
+    const isComp = ctx.isUiPath(target), isToken = ctx.isTokenPath(target)
     if (!isComp && !isToken) return
     const r = refresh(ctx)
     const relPath = ctx.rel(target)
     for (const a of [...r.changes.added, ...r.changes.newFiles]) if (!session.added.includes(a)) session.added.push(a)
-    if (isComp && !session.touched.includes(relPath)) session.touched.push(relPath)
+    // A Write that created a primitive went through the permission prompt (pre-tool).
+    if (inDir(target, ctx.uiDir) && session.added.includes(relPath) && !session.primitives.includes(relPath)) session.primitives.push(relPath)
+    if (isComp) touch(relPath)
     saveSession()
     if (!isComp) return emit('PostToolUse', `Aura: design tokens re-read (${r.tokens.colors.length} colors).`)
     const findings = checkWithBaseline(ctx, state(ctx, r), target, { isNew: session.added.includes(relPath) })
@@ -397,24 +558,48 @@ async function hook(event) {
     return
   }
 
-  if (event === 'stop') {
-    if (input.stop_hook_active) return
-    if (!session.touched.length) return
-    const r = refresh(ctx)
-    const st = state(ctx, r)
-    const errors = session.touched
-      .map((p) => path.join(ctx.repo, p))
-      .filter((p) => fs.existsSync(p))
-      .flatMap((p) => checkWithBaseline(ctx, st, p, { isNew: session.added.includes(ctx.rel(p)) }).filter((f) => f.severity === 'error' && !f.existing).map((f) => formatFindings(ctx.rel(p), [f])))
-    const undescribed = session.added.map((p) => r.registry.components.find((c) => c.path === p)).filter((c) => c && !c.described)
-    if (errors.length) return process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: unresolved component errors:\n${errors.join('\n')}` }))
-    if (undescribed.length) return process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: describe the new component(s) so other agents can find them: ${undescribed.map((c) => `aura describe ${c.name} --summary "…" --use "…" --keywords "vi, en"`).join(' ; ')} (run via node .aura/bin/aura.mjs).` }))
-    // One nudge per session: UI was edited, a dev server answers, and the rendered page was never inspected.
-    if (session.inspected || session.inspectNudged || ctx.config.inspect?.nudge === false) return
-    session.inspectNudged = true
+  if (event === 'stop' || event === 'subagent-stop') {
+    // The main agent answers for everything touched in the session; a subagent for what it touched.
+    const scope = event === 'subagent-stop' ? session.agents[input.agent_id]?.touched ?? [] : session.touched
+    const live = scope.filter((p) => fs.existsSync(path.join(ctx.repo, p)))
+    const mode = ctx.config.verify?.mode ?? (ctx.config.inspect?.nudge === false ? 'off' : 'required')
+    const maxBlocks = ctx.config.verify?.maxStopBlocks ?? 4
+    const key = event === 'subagent-stop' ? `blocks-${input.agent_id}` : 'blocks'
+    const problems = []
+    if (live.length) {
+      const r = refresh(ctx)
+      const st = state(ctx, r)
+      const errors = live.flatMap((p) => checkWithBaseline(ctx, st, path.join(ctx.repo, p), { isNew: session.added.includes(p) }).filter((f) => f.severity === 'error' && !f.existing).map((f) => formatFindings(p, [f])))
+      if (errors.length) problems.push(`unresolved component errors:\n${errors.join('\n')}`)
+      const rogue = session.unapproved.filter((p) => fs.existsSync(path.join(ctx.repo, p)))
+      if (rogue.length) problems.push(`primitive(s) created without the user's approval: ${rogue.join(', ')}. Delete them or ask the user and use aura add.`)
+      const undescribed = session.added.filter((p) => scope.includes(p) || session.primitives.includes(p)).map((p) => r.registry.components.find((c) => c.path === p)).filter((c) => c && !c.described)
+      if (undescribed.length) problems.push(`describe the new component(s) so other agents can find them: ${undescribed.map((c) => `aura describe ${c.name} --summary "…" --use "…" --keywords "vi, en"`).join(' ; ')}`)
+      if (mode === 'required') {
+        const record = loadVerify(ctx)
+        const stale = live.filter((p) => !verifiedClean(ctx, p, record))
+        if (stale.length) problems.push(`UI changed but not verified (or verify failed): ${stale.slice(0, 5).join(', ')}${stale.length > 5 ? ', …' : ''}. Run: node .aura/bin/aura.mjs verify  (checks the changed files and inspects the pages that render them; fix every error and re-run until it prints ✓ verified)`)
+      }
+    }
+    if (problems.length) {
+      session[key] = (session[key] ?? 0) + 1
+      saveSession()
+      if (session[key] <= maxBlocks) return json({ decision: 'block', reason: `Aura (${session[key]}/${maxBlocks}): ${problems.join('\n\n')}` })
+      // Give up blocking, but don't let it pass silently: the user sees what is left. The next turn starts counting again.
+      session[key] = 0
+      saveSession()
+      return json({ systemMessage: `Aura: the agent stopped with unresolved UI issues after ${maxBlocks} reminders:\n- ${problems.map((p) => p.split('\n')[0]).join('\n- ')}\nRun: node .aura/bin/aura.mjs verify` })
+    }
+    session[key] = 0
+    // Tell the user what changed in the shared UI kit and what wasn't inspected.
+    const msgs = []
+    const prims = session.primitives.filter((p) => !(session.reported ??= []).includes(p))
+    if (event === 'stop' && prims.length) { msgs.push(`new primitive(s) in ${uiRel ?? 'the UI kit'}: ${prims.map((p) => path.basename(p).replace(/\.\w+$/, '')).join(', ')}`); session.reported.push(...prims) }
+    const last = loadVerify(ctx).last
+    if (event === 'stop' && live.length && last?.skipped && session.skipReported !== last.at) { msgs.push(`rendered check skipped: ${last.skipped}`); session.skipReported = last.at }
+    if (event === 'stop' && live.length && last?.accepted?.length && session.acceptReported !== last.at) { msgs.push(`accepted findings: ${last.accepted.join(', ')} (${last.reason ?? 'no reason given'})`); session.acceptReported = last.at }
     saveSession()
-    const url = await devServer(ctx, session.touched)
-    if (url) process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: you changed UI (${session.touched.slice(0, 3).join(', ')}${session.touched.length > 3 ? ', …' : ''}) but haven't looked at the rendered result. Run: node .aura/bin/aura.mjs inspect ${url}<route of each page you changed> and fix every [error] (warns where they apply). If those pages can't be opened (auth, no data), say so and finish.` }))
+    if (msgs.length) json({ systemMessage: `Aura: ${msgs.join(' · ')}` })
   }
 }
 

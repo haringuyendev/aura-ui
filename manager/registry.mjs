@@ -138,7 +138,7 @@ export function refresh(ctx, { full = false } = {}) {
   }
   writeJson(f.cache, { scope, files: nextFiles, tokens })
   const movedFrom = new Set(moved.map(([from]) => from)), movedTo = new Set(moved.map(([, to]) => to))
-  const uiFiles = Object.keys(nextFiles).filter((p) => ctx.isComponentPath(path.join(ctx.repo, p)))
+  const uiFiles = Object.keys(nextFiles).filter((p) => ctx.isUiPath(path.join(ctx.repo, p)))
   return { scope, uiFiles, registry: { version: 1, components: list, library }, tokens, changes: { added: added.filter((a) => !movedTo.has(a)), removed: removed.filter((r) => !movedFrom.has(r)), updated, moved, newFiles } }
 }
 
