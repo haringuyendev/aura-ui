@@ -168,6 +168,34 @@ function writeBaseline(ctx, r) {
   return Object.values(snap.files).reduce((n, rules) => n + Object.values(rules).reduce((a, b) => a + (typeof b === 'number' ? b : b.count), 0), 0)
 }
 
+// The plugin version this CLI belongs to (next to it in the plugin; written into .aura/bin/VERSION when vendored).
+const VERSION = (() => {
+  try { return JSON.parse(fs.readFileSync(path.join(here, '..', '.claude-plugin', 'plugin.json'), 'utf8')).version } catch {}
+  try { return fs.readFileSync(path.join(here, 'VERSION'), 'utf8').trim() } catch { return null }
+})()
+/** Copy this CLI into .aura/bin so the team, CI and agents run it without the plugin. */
+function vendorCli(ctx) {
+  const bin = path.join(ctx.auraDir, 'bin')
+  fs.mkdirSync(bin, { recursive: true })
+  for (const file of fs.readdirSync(here).filter((x) => x.endsWith('.mjs'))) fs.copyFileSync(path.join(here, file), path.join(bin, file))
+  const catalog = path.join(here, '..', 'catalog', 'components.json')
+  if (fs.existsSync(catalog)) fs.copyFileSync(catalog, path.join(bin, 'aura-catalog.json'))
+  if (VERSION) fs.writeFileSync(path.join(bin, 'VERSION'), VERSION + '\n')
+}
+/**
+ * Hooks and skills tell agents to run .aura/bin/aura.mjs: keep it at the plugin's version, or an agent told to run
+ * a new command (verify, scaffold…) gets an old CLI that doesn't have it. Skipped with "cli": "local" (patched copy).
+ */
+function syncVendoredCli(ctx) {
+  const bin = path.join(ctx.auraDir, 'bin')
+  if (!VERSION || ctx.config.cli === 'local' || !fs.existsSync(path.join(here, '..', '.claude-plugin'))) return null
+  let current = null
+  try { current = fs.readFileSync(path.join(bin, 'VERSION'), 'utf8').trim() } catch {}
+  if (current === VERSION) return null
+  vendorCli(ctx)
+  return current ?? 'older'
+}
+
 function requireInit(ctx) {
   if (!isInitialised(ctx)) { console.error(`No .aura/ in ${ctx.repo}. Run: aura init`); process.exit(2) }
 }
@@ -194,12 +222,7 @@ async function main() {
       rules: DEFAULT_RULES,
       allowUiLibraries: [],
     }, null, 2) + '\n')
-    // Vendor the CLI so the team and CI can run it without the plugin.
-    const bin = path.join(ctx.auraDir, 'bin')
-    fs.mkdirSync(bin, { recursive: true })
-    for (const file of fs.readdirSync(here).filter((x) => x.endsWith('.mjs'))) fs.copyFileSync(path.join(here, file), path.join(bin, file))
-    const catalog = path.join(here, '..', 'catalog', 'components.json')
-    if (fs.existsSync(catalog)) fs.copyFileSync(catalog, path.join(bin, 'aura-catalog.json'))
+    vendorCli(ctx)
     fs.writeFileSync(path.join(ctx.auraDir, '.gitignore'), 'cache/\n')
     if (has('scripts') && ctx.pkg && fs.existsSync(path.join(ctx.repo, 'package.json'))) {
       const pkgPath = path.join(ctx.repo, 'package.json')
@@ -239,6 +262,7 @@ async function main() {
   }
 
   requireInit(ctx)
+  syncVendoredCli(ctx)
   const r = refresh(ctx, { full: cmd === 'scan' })
   const everything = [...r.registry.components, ...(r.registry.library ?? [])]
   const byName = (n) => everything.find((c) => c.name.toLowerCase() === n.toLowerCase()) ?? everything.find((c) => c.exports.some((e) => e.toLowerCase() === n.toLowerCase()))
@@ -470,6 +494,7 @@ async function hook(event) {
     return emit('PostToolUse', `Aura: this repo (${path.basename(ctx.repo)}) has no .aura/ registry, so components aren't indexed and edits aren't checked (duplicates, raw primitives, undefined tokens). Offer the user the aura-ui:init skill (node "${cli}" init): one read-only scan that writes .aura/ and enables the checks. Don't run it without asking.`)
   }
   if (!isInitialised(ctx)) return // not an aura-managed repo: stay silent
+  const synced = syncVendoredCli(ctx)
 
   // Session state: files touched (by Write/Edit and by shell commands), per subagent too.
   const sessionFile = path.join(ctx.auraDir, 'cache', `session-${String(input.session_id ?? 'default').replace(/[^\w-]/g, '')}.json`)
@@ -489,7 +514,7 @@ async function hook(event) {
     saveSession()
     const { added, removed } = r.changes
     const note = added.length || removed.length ? `\nSince the last session: ${added.length ? `added ${added.join(', ')}` : ''}${added.length && removed.length ? '; ' : ''}${removed.length ? `removed ${removed.join(', ')}` : ''}.` : ''
-    return emit('SessionStart', summary(ctx, loadProfile(ctx), r.registry) + note)
+    return emit('SessionStart', summary(ctx, loadProfile(ctx), r.registry) + note + (synced ? `\n.aura/bin updated to Aura ${VERSION} (was ${synced}); commit it with the rest of .aura/.` : ''))
   }
 
   if (event === 'pre-tool') {
