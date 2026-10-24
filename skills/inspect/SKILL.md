@@ -1,10 +1,30 @@
 ---
 name: inspect
-description: Check how a built page actually renders - layout breaks at 1440/768/390, whether key numbers stand out, whether statuses and exceptions carry color, contrast, repeated content, cluttered first screen and button problems - with aura inspect, which opens the page headless and reports findings as text, so you fix the UI from a report instead of judging screenshots. Use after building or changing a page or dashboard, when the Aura stop hook asks you to inspect, or when the user says the UI looks gray, flat, cluttered, inconsistent or badly organized.
+description: Verify UI work before saying it is done with aura verify (checks the changed files, finds the pages that render them and inspects those), and check how a built page actually renders - layout breaks at 1440/768/390, whether key numbers stand out, whether statuses and exceptions carry color, contrast, repeated content, cluttered first screen and button problems - with aura inspect, which opens the page headless and reports findings as text, so you fix the UI from a report instead of judging screenshots. Use after building or changing a page or dashboard, when the Aura stop hook asks you to verify, or when the user says the UI looks gray, flat, cluttered, inconsistent or badly organized.
 ---
 
-# Aura inspect
+# Aura verify and inspect
 
+## verify: the check before you say it is done
+```bash
+node .aura/bin/aura.mjs verify                                   # changed UI files (git + this session) → check + the pages that render them
+node .aura/bin/aura.mjs verify /orders/123                       # pages to open yourself (a real id for /orders/:id)
+node .aura/bin/aura.mjs verify --base http://localhost:3005      # when the dev server isn't found
+node .aura/bin/aura.mjs verify --files src/pages/orders.tsx      # only these files
+node .aura/bin/aura.mjs verify --accept contrast --reason "brand teal is a project token; proposed a darker one to the user"
+node .aura/bin/aura.mjs verify --skip-inspect "pages need a login and there is no storage state"
+```
+- It finds the pages through the import graph and the router (Next/Remix/TanStack file routes, React Router
+  `<Route path element>` with path constants), picks up to 6 that cover every changed file, finds each app's dev
+  server (port from its vite/next config or scripts, or `"inspect": { "baseUrl": … }` in `.aura/rules.json`,
+  per app: `{ "apps/web": "http://localhost:3005" }`) and runs inspect on them.
+- Fix every `[error]` and re-run until it prints `✓ verified`. The Stop hook (and SubagentStop for subagents)
+  won't let you finish while a file you changed is unverified or changed again after verifying.
+- `--accept` is for findings that are wrong for this page, with the reason; the user is shown it. `--skip-inspect`
+  is for pages that can't be opened; say so in your reply. Don't use either to get past real problems.
+- No dev server? Start it (in the background) and re-run. Pages with a parameter need a real path.
+
+## inspect: one page, by hand
 ```bash
 node .aura/bin/aura.mjs inspect http://localhost:5173/dashboard            # one page, widths 1440, 768, 390
 node .aura/bin/aura.mjs inspect http://localhost:5173 /orders /orders/42   # first URL is the base for paths

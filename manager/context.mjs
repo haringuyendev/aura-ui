@@ -260,6 +260,10 @@ export function createContext(repoArg = '.') {
   /** A file the registry tracks: any .tsx/.jsx/.vue/.svelte except tests, stories and route files (pages, layouts, app router files). */
   const ROUTE = /(^|\/)(pages|routes|app)\/.*\/?(page|layout|loading|error|not-found|template|default|route|head|global-error)\.[jt]sx$|(^|\/)(src\/)?(pages|routes)\/|\+(page|layout|error)\.svelte$|\.page\.[jt]sx$|(^|\/)(e2e|tests?|__tests__|__mocks__|fixtures|cypress|playwright)\//
   const isComponentPath = (abs) => /\.(tsx|jsx|vue|svelte)$/.test(abs) && !/\.(test|spec|stories|story)\./.test(abs) && (uiDir && abs.startsWith(uiDir + path.sep) || /\/_?components?\//.test('/' + rel(abs)) || !ROUTE.test(rel(abs)))
+  /** A file the hooks check: every UI source file, pages and layouts included (screens are written there), except tests and stories. */
+  const TEST_DIR = /(^|\/)(e2e|tests?|__tests__|__mocks__|fixtures|cypress|playwright)\//
+  const isUiPath = (abs) => /\.(tsx|jsx|vue|svelte)$/.test(abs) && !/\.(test|spec|stories|story)\./.test(abs) && !TEST_DIR.test(rel(abs))
+  const isRouteFile = (abs) => isUiPath(abs) && !isComponentPath(abs)
   const isTokenPath = (abs) => /\.css$/.test(abs) || /tailwind[.-](config|preset)[\w.-]*\.[cm]?[jt]s$/.test(abs)
   /** For a barrel file (index.ts, a package entry): exported name → the file that defines it, following re-exports. */
   const barrelCache = new Map()
@@ -294,5 +298,5 @@ export function createContext(repoArg = '.') {
   const workspaces = monorepo ? packages.slice(1).map((p) => ({ name: p.name, dir: rel(p.dir) })) : []
   const aliases = packages[0].aliases
 
-  return { repo, rel, pkg, config, uiLibPrefixes, barrelNames, isBarrel, ownerOf, resolvePackageSpec, deps, stack, usedUiLibs, shadcn, aliases, resolveImport, importPathFor, localImportFor, packageOf, workspaces, monorepo, uiDir, srcRoot, walk, isComponentPath, isTokenPath, auraDir: path.join(repo, '.aura') }
+  return { repo, rel, pkg, config, uiLibPrefixes, barrelNames, isBarrel, ownerOf, resolvePackageSpec, deps, stack, usedUiLibs, shadcn, aliases, resolveImport, importPathFor, localImportFor, packageOf, workspaces, monorepo, uiDir, srcRoot, walk, isComponentPath, isUiPath, isRouteFile, isTokenPath, auraDir: path.join(repo, '.aura') }
 }

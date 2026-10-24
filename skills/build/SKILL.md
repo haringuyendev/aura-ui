@@ -1,6 +1,6 @@
 ---
 name: build
-description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a rendered-page self-check with aura inspect (no screenshot judging). Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
+description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a rendered-page self-check with aura verify (no screenshot judging). Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
 hooks:
   PostToolUse:
     - matcher: "Write|Edit"
@@ -20,13 +20,22 @@ hooks:
    all 60+ shadcn components, ready-made blocks, vi-VN formatters (`src/lib/format.ts`) and tokens with a
    chart palette and status colors. Don't switch frameworks or add another UI library.
 2. **Existing app without `.aura/`?** Run the `aura-ui:init` skill first (one-time scan).
-3. **Find components with the `aura-ui:find` skill** (`node .aura/bin/aura.mjs find "<need>"`, `show`,
+3. **Find components with the `aura-ui:find` skill** (`node .aura/bin/aura.mjs find "<need>"`, `snippet`,
    `tokens`) instead of reading component folders. Prefer a block over re-assembling its primitives.
+   **A primitive the project lacks** (find says `MISSING PRIMITIVE`): ask the user, and add it with
+   `aura add <name>` only if they agree; otherwise compose from what exists. Never hand-build it from divs.
    For a rich text editor or a PDF/Word/Excel viewer in a starter app, `aura find` prints the add-on's
    install command.
-4. Agent hooks check every component edit. If one blocks you, follow the `aura-ui:check` skill. After
-   creating a component, describe it (`aura-ui:describe`) so the next agent finds it.
-5. **Plan color and emphasis before laying out a screen** (write it down in code, not in your head):
+4. **Start a new page from a scaffold** in an existing project:
+   `node .aura/bin/aura.mjs scaffold <dashboard|list|detail|form> <path/to/page.tsx> [--name Orders]`. It writes
+   the page from the project's own components with the right structure already in place (what needs action
+   first, KPI band with exception colors, one `STATUS` map on the project's badge variants, vi-VN number and
+   date formats, a table, filters/empty state, a form with field primitives). Wire the route, replace sample
+   data and TODO text, keep the structure. A look a primitive lacks (an Item per severity, an accent bar):
+   `aura variant <Component> <name> --write`, never a styled `div`.
+5. Agent hooks check every UI edit, including edits made with shell commands. If one blocks you, follow the
+   `aura-ui:check` skill. After creating a component, describe it (`aura-ui:describe`) so the next agent finds it.
+6. **Plan color and emphasis before laying out a screen** (write it down in code, not in your head):
    - **One status map per domain.** Put every status of the domain in one `STATUS_VARIANT` (or `tone`)
      map next to its labels and use it everywhere the status shows: waiting/pending → `warning`, in
      progress → `info`, done/approved → `success`, cancelled/failed/overdue → `destructive`, draft →
@@ -40,8 +49,8 @@ hooks:
 ## Working in an existing project
 The project's design system wins over the starter:
 - **Rule 8 becomes "compose only from the project's components"** (what `aura find` returns). Never add a
-  second UI library or copy starter files in. If something is missing, add it the project's way (e.g.
-  `npx shadcn add <name>` with its `components.json`), or port an aura block by rewriting it for the
+  second UI library or copy starter files in. If a primitive is missing, ask the user and add it with
+  `aura add <name>` (shadcn with the project's `components.json` and package manager), or port an aura block by rewriting it for the
   project's primitives: Radix-based shadcn uses `asChild`, the starter's Base UI uses `render`; import
   `cn` from the project's path.
 - **Tokens are the project's** (`aura tokens`). If a status, info or chart token is missing or not
@@ -79,7 +88,9 @@ The project's design system wins over the starter:
    dialog, tooltip and form control comes from `src/components/ui/` or `src/components/blocks/`
    (charts through `chart.tsx` / recharts). Do not hand-roll an equivalent with raw `div`s or inline `<svg>`. If something is missing,
    add a variant to the closest component or compose existing ones; layout wrappers (grid, flex, spacing)
-   are the only free-form markup.
+   are the only free-form markup. A box with rounded corners plus border/shadow/tint and padding is a
+   Card or Item, a tinted or left-accented row is an Alert or Item variant, a small rounded label is a Badge:
+   the `hand-built-surface` hook rule blocks these when they are styled `div`/`li`/`span`s.
 
 ## First build of a new app
 Before writing code, post a short brief in chat (5–10 lines, no more):
@@ -161,14 +172,17 @@ Dense where the user scans many similar items, airy where they read. Cramped is 
 ## Done means
 1. `npm run build` passes with no type or CSS errors, and imports resolve.
 2. The dev server runs (`npm run dev`) and the page loads with no console errors.
-   **Check the rendered result with `aura inspect`, not by eyeballing screenshots** (`aura-ui:inspect`):
-   `node .aura/bin/aura.mjs inspect http://localhost:<port>/<route> [/other-route…]`. It opens each page at
-   1440/768/390, prints the page outline and reports layout breaks (horizontal scroll, overlap, clipped
-   text, uneven card rows), KPI emphasis, status colors, contrast, repeated content and button problems as
-   text. Fix every `[error]`, the `[warn]`s that apply, and re-run until no error is left. Take one
-   screenshot at the end only if the user wants to see it. At 390px wide tables become a stacked list
-   and multi-column grids collapse to one column. Also tab through the page: every interactive
-   element, including clickable rows and cards, shows a visible focus ring (`focus-visible:ring-2 ring-ring`).
+   **Run `node .aura/bin/aura.mjs verify` and keep fixing until it prints `✓ verified`** (`aura-ui:inspect`).
+   It checks every UI file you changed (also through shell commands), finds the pages that render them
+   through imports and the router, opens them at 1440/768/390 and reports layout breaks, KPI emphasis, status
+   colors, contrast, repeated content and button problems as text. The Stop hook does not let you finish
+   until the files you changed are verified. A page with a parameter needs a real one
+   (`aura verify /orders/123`); pages behind a login need `--storage` or, if they can't be opened,
+   `--skip-inspect "<why>"` and you tell the user. A finding that is wrong for the page:
+   `--accept <rule> --reason "<why>"` (the user sees the reason). Don't judge screenshots; take one at the end
+   only if the user wants to see it. At 390px wide tables become a stacked list and multi-column grids
+   collapse to one column. Also tab through the page: every interactive element, including clickable rows and
+   cards, shows a visible focus ring (`focus-visible:ring-2 ring-ring`).
 3. Grep your new files for raw colors and fix any hit:
    `grep -rnE "(bg|text|border|from|to|via)-(white|black|slate|gray|zinc|neutral|red|orange|amber|yellow|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|pink|rose)(-[0-9]+)?\b|#[0-9a-fA-F]{3,6}\b" src --include=*.tsx | grep -v components/ui`
 4. Tell the user the URL to open. Keep the closing message to a couple of lines.

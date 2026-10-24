@@ -314,7 +314,7 @@ function DataTable<TData>({
       {hasToolbar && (
         <div className="flex min-h-9 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           {selectable && selectedRows.length > 0 ? (
-            <div role="region" aria-label="Thao tác với các dòng đã chọn" className="flex min-h-9 w-full flex-wrap items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-accent-foreground">
+            <div /* aura-ignore hand-built-surface: selection toolbar, not a card */ role="region" aria-label="Thao tác với các dòng đã chọn" className="flex min-h-9 w-full flex-wrap items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-accent-foreground">
               <span className="text-sm font-medium tabular-nums">Đã chọn {formatNumber(selectedRows.length)}</span>
               <div className="flex flex-wrap items-center gap-2">
                 {bulkActions?.(selectedRows.map((r) => r.original), clearSelection)}

@@ -89,7 +89,7 @@ export function resolveUrls(args, baseUrl) {
 }
 
 export async function inspect(ctx, urls, opts = {}) {
-  const cfg = { ...INSPECT_DEFAULTS, ...(ctx.config.inspect ?? {}), ...opts }
+  const cfg = { ...INSPECT_DEFAULTS, ...(ctx.config.inspect ?? {}), ...Object.fromEntries(Object.entries(opts).filter(([, v]) => v !== undefined)) }
   const pw = await loadPlaywright(ctx)
   if (!pw) throw new Error('Playwright is not installed in this project. Install it as a dev dependency (e.g. bun add -d playwright / npm i -D playwright), then: npx playwright install chromium')
   const browser = await launch(pw)

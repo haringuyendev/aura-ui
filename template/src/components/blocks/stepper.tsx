@@ -51,7 +51,7 @@ function Stepper({ steps, current, onStepClick, className, ...props }: StepperPr
                   <span className="sm:hidden">{text}</span>
                 </>
               )}
-              {i < steps.length - 1 && <span aria-hidden className={cn("hidden h-px flex-1 sm:block", i < current ? "bg-primary" : "bg-border")} />}
+              {i < steps.length - 1 && <span /* aura-ignore hand-built-surface: step connector that fills as steps complete */ aria-hidden className={cn("hidden h-px flex-1 sm:block", i < current ? "bg-primary" : "bg-border")} />}
             </div>
             <span className="hidden sm:block">{text}</span>
           </li>
