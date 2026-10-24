@@ -8,11 +8,14 @@ description: Set up the Aura component manager in a repository - scan the projec
 `${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder (Claude Code fills it in; with other agents, use the folder where the aura-ui repo is cloned).
 
 ## Steps
-1. Go to the repository root (the folder with `package.json`). If `.aura/registry.json` already exists,
-   stop: the repo is set up; use the `aura-ui:scan` skill to refresh instead.
+1. Go to the repository root. **In a monorepo** (package.json `workspaces` or `pnpm-workspace.yaml`), run it
+   at the workspace root, not inside a package: one `.aura/` covers every app and package, the shadcn package
+   (e.g. `packages/ui`) is the primitive source, usage is counted across apps, and hooks check every app.
+   If `.aura/registry.json` already exists, re-running only rescans and refreshes `.aura/bin` (rules and
+   baseline are kept); for a plain refresh use the `aura-ui:scan` skill.
 2. Run:
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" init            # add --no-scripts to leave package.json untouched
+   node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" init            # add --scripts to also add npm scripts aura / aura:check
    ```
    It is read-only on source code. It writes:
    - `.aura/registry.json`: every component (primitives in `components/ui`, shared components, sections/
@@ -23,14 +26,18 @@ description: Set up the Aura component manager in a repository - scan the projec
    - `.aura/rules.json`: rule severities (`error` blocks the agent, `warn`, `info`, `off`).
    - `.aura/baseline.json`: findings that already exist, so hooks only block new ones.
    - `.aura/bin/`: a copy of the CLI, so the team and CI can run it without the plugin.
-   - npm scripts `aura` and `aura:check` (unless `--no-scripts`).
+   - `package.json` is left untouched unless you pass `--scripts` (ask the user first in a shared repo).
 3. Report to the user in a few lines, from the printed summary:
-   - the stack, UI library, token file, number of components;
+   - the stack, UI library, token file, number of components (and packages, in a monorepo);
+   - if primitives show `?` or tokens look wrong, set `primitivesDir` / `tokenFiles` in `.aura/rules.json`
+     (see `aura-ui:check`); if a library the project relies on is reported as foreign, add it to
+     `allowUiLibraries`;
    - **findings** worth fixing (undefined tokens, status colors not text-safe, missing info/chart tokens,
      raw colors) and the baseline count;
    - how many components have no description yet; offer the `aura-ui:describe` skill to fill them.
 4. Tell the user to **commit `.aura/`** (the cache folder is git-ignored) and, for people who edit code by
-   hand, to add `npm run aura:check` to their pre-commit hook or CI.
+   hand, to add `node .aura/bin/aura.mjs check --changed` to their pre-commit hook or CI. If init notes a
+   leftover per-package `.aura/` in a monorepo, suggest deleting it.
 
 ## After init
 - The plugin's hooks are active in this repo: session-start summary, checks after Write/Edit, registry sync

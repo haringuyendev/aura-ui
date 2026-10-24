@@ -26,10 +26,20 @@ node .aura/bin/aura.mjs describe <Name> \
 
 ## All undescribed components (enriching a fresh registry)
 1. List them: `node -e 'const r=require("./.aura/registry.json");for(const c of r.components)if(!c.described)console.log(c.name, c.category, c.path, "used", c.usedBy)'`
-2. Work most-used first. For each: read the file (and one usage from `usedIn`), then run `describe`.
+2. Work most-used first. For each: read the file (and one usage from `usedIn`) and write an entry.
    Keep each description short; skip trivial internal helpers (say so).
-3. Spot-check with `aura find "<a natural query>"` that the component now comes up.
+3. Write all entries to one JSON file and apply them at once:
+   ```bash
+   node .aura/bin/aura.mjs describe --from /tmp/aura-describe.json
+   ```
+   ```json
+   [{ "name": "price-tag", "summary": "…", "use_when": ["thẻ căn hộ", "bảng giá"], "avoid_when": "…",
+      "keywords": ["giá", "price"], "example": "<PriceTag value={3.85} />" }]
+   ```
+   Add `"path"` when two components share a name (e.g. in different apps of a monorepo).
+4. Spot-check with `aura find "<a natural query>"` that the component now comes up.
 
 Descriptions live in `.aura/registry.json` and survive edits and file moves; commit them with the code.
 Entries with `describedBy: "aura-catalog"` were pre-filled from the aura catalog for shadcn-style
-primitives; rewrite them only if the project's version behaves differently.
+primitives whose exports match, and follow catalog updates; describe one yourself to take it over when the
+project's version behaves differently.

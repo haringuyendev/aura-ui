@@ -1,4 +1,4 @@
-# Aura UI (v1.2)
+# Aura UI (v1.3)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -69,12 +69,23 @@ token và component của template, sửa file này là cả app đổi theo (đ
 ## Aura component manager
 Aura quản lý component của chính dự án: registry `.aura/` luôn khớp với code nhờ hook của agent.
 ```bash
-node manager/aura.mjs init                       # trong repo dự án: quét, tạo .aura/, thêm script npm (app mới từ starter tự chạy)
-npm run aura -- find "ô nhập liệu"               # component phù hợp trong dự án
-npm run aura -- show Button                      # props, variant, mô tả, nơi đang dùng
-npm run aura -- tokens                           # màu, font, token trạng thái (cái nào dùng làm chữ được)
-npm run aura:check                               # kiểm tra file đã đổi (dùng cho pre-commit/CI)
+node manager/aura.mjs init                       # trong repo dự án (monorepo: ở thư mục gốc): quét, tạo .aura/; --scripts để thêm script npm
+node .aura/bin/aura.mjs find "ô nhập liệu"       # component phù hợp trong dự án
+node .aura/bin/aura.mjs show Button              # props, variant, mô tả, đường import, nơi đang dùng
+node .aura/bin/aura.mjs tokens                   # màu, font, token trạng thái (cái nào dùng làm chữ được)
+node .aura/bin/aura.mjs check --changed          # kiểm tra file đã đổi (dùng cho pre-commit/CI)
+node .aura/bin/aura.mjs stats                    # số finding theo rule: mới / có sẵn
+node .aura/bin/aura.mjs describe --from mo-ta.json   # mô tả nhiều component một lần
 ```
+
+**Monorepo** (Turborepo, Nx, pnpm/bun/yarn workspaces): init ở thư mục gốc. Một `.aura/` quản lý mọi app và
+package; package có `components.json` (vd. `packages/ui`) là nguồn primitive; hiểu alias tsconfig, `#imports`
+của package.json và `exports` của workspace package; đếm lượt dùng trên toàn bộ app; in đường import công khai
+(`@acme/ui/components/button`) kèm đường nội bộ (`#components/button`); đọc token theo `@import` sang package khác.
+
+Tuỳ chỉnh trong `.aura/rules.json`: `rules` (mức độ), `allowUiLibraries`, `primitivesDir`, `tokenFiles`,
+`cli: "local"` (hook chạy `.aura/bin` thay cho bản trong plugin).
+
 Hook (khai báo trong `hooks/hooks.json`, chỉ hoạt động ở repo có `.aura/`):
 - **SessionStart:** làm mới registry và đưa tóm tắt design system vào ngữ cảnh agent.
 - **PostToolUse (Write/Edit):** cập nhật registry, kiểm tra file; **chặn** component trùng, tự vẽ `<button>`/`<input>`

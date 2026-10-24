@@ -20,7 +20,7 @@ const PHRASES = {
   'the': ['card'], 'lien ket': ['link'], 'duong dan': ['link'], 'tieu de': ['heading', 'title', 'hero'], 'dau trang': ['header'],
   'chan trang': ['footer'], 'ban do': ['map', 'location'], 'vi tri': ['location', 'map'], 'hop thoai': ['dialog', 'modal'],
   'popup': ['dialog', 'modal'], 'menu': ['menu', 'nav', 'navigation'], 'dieu huong': ['nav', 'navigation', 'menu'], 'logo': ['logo'],
-  'lua chon': ['select', 'option'], 'chon ngay': ['date', 'calendar'], 'ngay': ['date'], 'lich': ['calendar', 'schedule'],
+  'lua chon': ['select', 'option'], 'o chon': ['select', 'combobox'], 'co tim kiem': ['combobox', 'autocomplete', 'search'], 'tim va chon': ['combobox', 'autocomplete'], 'chon ngay': ['date', 'calendar'], 'ngay': ['date'], 'lich': ['calendar', 'schedule'],
   'tai len': ['upload'], 'tai xuong': ['download'], 'tep': ['file', 'document'], 'tai lieu': ['document', 'legal', 'file'],
   'phan trang': ['pagination'], 'thong bao': ['toast', 'alert', 'notification', 'banner'], 'canh bao': ['alert', 'warning'],
   'tim kiem': ['search'], 'bo loc': ['filter'], 'loc': ['filter'], 'bang chuyen': ['carousel', 'slider'], 'trinh chieu': ['carousel', 'slider'],
@@ -102,9 +102,10 @@ export function findComponents(registry, query, { limit = 6 } = {}) {
 }
 
 export function formatComponent(c, { detail = false } = {}) {
-  const head = `${c.name} [${c.category}] import { ${c.exports.slice(0, 4).join(', ')}${c.exports.length > 4 ? ', …' : ''} } from "${c.import}" · used in ${c.usedBy ?? 0} files`
+  const head = `${c.name} [${c.category}${c.package && !c.importInPackage ? `, ${c.package} only` : ''}] import { ${c.exports.slice(0, 4).join(', ')}${c.exports.length > 4 ? ', …' : ''} } from "${c.import}" · used in ${c.usedBy ?? 0} files`
   const desc = c.summary ?? c.doc
   const lines = [head]
+  if (c.importInPackage) lines.push(`  inside ${c.package}: from "${c.importInPackage}"`)
   if (desc) lines.push(`  ${desc}`)
   if (Object.keys(c.variants ?? {}).length) lines.push(`  variants: ${Object.entries(c.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')}`)
   if (detail) {
