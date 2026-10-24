@@ -41,6 +41,9 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   // Inside the component's own package, use its local form (#components/x); elsewhere its public import.
   const importFrom = (c) => (c.importInPackage && c.package && ctx.packageOf(abs) === c.package ? c.importInPackage : c.import)
   const colors = new Set(state.tokens.colors)
+  const prefixes = state.tokens.colorPrefixes ?? []
+  // Without any known color tokens (CSS-in-JS theme, plain Tailwind palette) there is nothing to check against.
+  const knowsTokens = colors.size > 0
   const custom = new Set(state.tokens.customUtilities)
 
   // undefined-token: bg-/text-/border-… classes naming a color the design system doesn't define
@@ -52,7 +55,8 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
     if (util === 'bg' && /^(blend|clip|origin|gradient|linear|radial|conic)(-|$)/.test(raw)) continue
     const name = raw.replace(util === 'ring' || util === 'outline' ? /^offset-/ : util === 'border' || util === 'divide' ? /^(?:[xytblrse]|block|inline)-/ : /^$/, '')
     const cls = whole.replace(/^(?:[\w-]+:)*/, '').replace(/\/\d+$/, '')
-    if (custom.has(cls) || BUILTIN.has(name) || colors.has(name) || NOT_COLOR.test(name)) continue
+    if (!knowsTokens) break
+    if (custom.has(cls) || BUILTIN.has(name) || colors.has(name) || NOT_COLOR.test(name) || prefixes.some((p) => name.startsWith(p + '-'))) continue
     if (name.split('-').every((p) => NOT_COLOR.test(p))) continue
     if (/^(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d+$/.test(name)) continue // raw palette: reported below
     if (seen.has(name)) continue
@@ -85,12 +89,15 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   const inUi = ctx.uiDir && abs.startsWith(ctx.uiDir + path.sep)
   if (!inUi) {
     const prims = new Map(state.registry.components.filter((c) => c.category === 'primitive').map((c) => [c.name.toLowerCase(), c]))
+    // No own primitive? The UI library's component the project already uses (antd Button, MUI TextField, Chakra Modal…).
+    const LIB_FOR = { button: ['Button'], input: ['Input', 'TextField', 'TextInput'], select: ['Select', 'NativeSelect'], textarea: ['Textarea', 'TextArea', 'Input'], dialog: ['Modal', 'Dialog'], table: ['Table', 'DataGrid', 'DataTable'] }
+    const lib = state.registry.library ?? []
     for (const tag of ['button', 'input', 'select', 'textarea', 'dialog', 'table']) {
-      const prim = prims.get(tag)
+      const prim = prims.get(tag) ?? LIB_FOR[tag].map((n) => lib.filter((c) => c.name === n).sort((a, b) => b.usedBy - a.usedBy)[0]).find(Boolean)
       if (!prim) continue
       const hits = [...src.matchAll(new RegExp(`<${tag}\\b([^>]*)>`, 'g'))].filter((x) => !(tag === 'input' && /type=["'](hidden|file|checkbox|radio)["']/.test(x[1])))
       // one finding per occurrence, so the baseline can tell a new raw element from an old one
-      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${Object.keys(prim.variants ?? {}).length ? ` (variants: ${Object.entries(prim.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : ''}.`)
+      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.category === 'library' ? prim.import : prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${Object.keys(prim.variants ?? {}).length ? ` (variants: ${Object.entries(prim.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : ''}.`)
     }
   }
 

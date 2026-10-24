@@ -75,6 +75,7 @@ node .aura/bin/aura.mjs show Button              # props, variant, mô tả, đ�
 node .aura/bin/aura.mjs tokens                   # màu, font, token trạng thái (cái nào dùng làm chữ được)
 node .aura/bin/aura.mjs check --changed          # kiểm tra file đã đổi (dùng cho pre-commit/CI)
 node .aura/bin/aura.mjs stats                    # số finding theo rule: mới / có sẵn
+node .aura/bin/aura.mjs doctor                   # Aura chưa nhận ra gì ở repo này, sửa bằng key nào
 node .aura/bin/aura.mjs describe --from mo-ta.json   # mô tả nhiều component một lần
 ```
 
@@ -82,6 +83,14 @@ node .aura/bin/aura.mjs describe --from mo-ta.json   # mô tả nhiều componen
 package; package có `components.json` (vd. `packages/ui`) là nguồn primitive; hiểu alias tsconfig, `#imports`
 của package.json và `exports` của workspace package; đếm lượt dùng trên toàn bộ app; in đường import công khai
 (`@acme/ui/components/button`) kèm đường nội bộ (`#components/button`); đọc token theo `@import` sang package khác.
+
+**Repo bất kỳ:** Aura tự nhận Next/Vite/Remix/CRA/Nx/Vue/Svelte, workspace npm/pnpm/yarn/bun, alias tsconfig
+(`paths`, `baseUrl`, `extends`), `#imports`/`exports` (kể cả `dist/` → `src/`), barrel `index.ts`, package `ui`/
+`design-system`, thư viện UI dùng trực tiếp (antd, MUI, Chakra, Mantine, Headless UI… thì component của thư viện
+là primitive), Tailwind v3 (config/preset ở bất kỳ đâu, màu lồng nhau), Tailwind v4 `@theme`, theme viết bằng code.
+Cái gì không nhận ra được thì `aura doctor` liệt kê kèm cách sửa; skill `init` hướng dẫn agent tự chỉnh.
+Đã thử trên: turbo-web, starter aura, cal.com, dub, taxonomy, next-template, vercel/commerce, ant-design-pro,
+chakra-ui-docs, horizon-ui, mui/toolpad, nx-examples, một dự án Vue/shadcn-vue.
 
 Tuỳ chỉnh trong `.aura/rules.json`: `rules` (mức độ), `allowUiLibraries`, `primitivesDir`, `tokenFiles`,
 `cli: "local"` (hook chạy `.aura/bin` thay cho bản trong plugin).
