@@ -1,4 +1,4 @@
-# Aura UI (v1.3)
+# Aura UI (v1.4)
 
 Plugin/skill giúp coding agent làm UI không bị "AI slop", theo cách Lovable làm: **stack cố định,
 starter cài sẵn đủ component, design system viết trước, màn hình chỉ được ghép từ component có sẵn**.
@@ -19,13 +19,14 @@ Thang 0–3, ship-quality ≥ 2,6. Chi tiết từng vòng trong `evals/results/
 ```
 .claude-plugin/              plugin.json, marketplace.json
 hooks/hooks.json             hook cho agent: SessionStart, PostToolUse (Write|Edit, Bash), Stop
-skills/                      7 skill, gọi bằng /aura-ui:<tên>
+skills/                      8 skill, gọi bằng /aura-ui:<tên>
   build/                     dựng/sửa màn hình theo luật thiết kế (tự kích hoạt khi làm UI)
   init/  scan/               cài aura vào repo · quét lại, trạng thái, baseline
   find/  check/  describe/   tìm component · kiểm tra & sửa lỗi · viết mô tả component
+  inspect/                   mở trang đã dựng, báo lỗi bố cục / màu / số liệu / lặp nội dung bằng chữ
   new-app/                   tạo app từ starter (add-on editor/lightbox: aura find in sẵn lệnh cài khi cần)
 manager/                     Aura component manager: aura.mjs (init, find, show, usage, tokens, check,
-                             describe, baseline, scan, status, hook)
+                             inspect, describe, baseline, scan, status, hook)
 template/                    starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component, Base UI),
                              blocks/ (page-header, stat, data-table, form…), lib/format.ts, token
 catalog/components.json      danh mục 76 mục của starter (dùng làm từ điển Việt–Anh cho aura find)
@@ -76,8 +77,16 @@ node .aura/bin/aura.mjs tokens                   # màu, font, token trạng th�
 node .aura/bin/aura.mjs check --changed          # kiểm tra file đã đổi (dùng cho pre-commit/CI)
 node .aura/bin/aura.mjs stats                    # số finding theo rule: mới / có sẵn
 node .aura/bin/aura.mjs doctor                   # Aura chưa nhận ra gì ở repo này, sửa bằng key nào
+node .aura/bin/aura.mjs inspect http://localhost:5173 /orders   # xem trang đã render ở 1440/768/390, báo lỗi bằng chữ
 node .aura/bin/aura.mjs describe --from mo-ta.json   # mô tả nhiều component một lần
 ```
+
+**Kiểm tra trang đã dựng** (`aura inspect`, cần dev server và Playwright trong dự án): mở trang headless ở
+1440/768/390, in dàn ý trang (khối nào nằm trong màn đầu) và báo bằng chữ: tràn ngang, chồng lấn, chữ bị cắt,
+thẻ cao lệch; số KPI chưa nổi bật hoặc đang báo "quá hạn" mà vẫn xám; trạng thái cùng một màu xám; tương phản
+dưới WCAG AA; tỉ lệ nội dung có màu quá thấp; cùng một thông tin lặp ở nhiều khối; nhiều nút primary, nút Xóa/Hủy
+không có màu destructive, nút trông như bị tắt. Agent sửa theo báo cáo thay vì tự nhìn ảnh chụp; hook Stop nhắc
+một lần nếu đã sửa UI mà chưa inspect. Ngưỡng và mức độ chỉnh trong `.aura/rules.json` (`"inspect": {…}`).
 
 **Monorepo** (Turborepo, Nx, pnpm/bun/yarn workspaces): init ở thư mục gốc. Một `.aura/` quản lý mọi app và
 package; package có `components.json` (vd. `packages/ui`) là nguồn primitive; hiểu alias tsconfig, `#imports`
