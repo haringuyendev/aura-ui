@@ -105,7 +105,7 @@ export function formatComponent(c, { detail = false } = {}) {
   const head = `${c.name} [${c.category}${c.package && !c.importInPackage ? `, ${c.package} only` : ''}] import { ${c.exports.slice(0, 4).join(', ')}${c.exports.length > 4 ? ', …' : ''} } from "${c.import}" · used in ${c.usedBy ?? 0} files`
   const desc = c.summary ?? c.doc
   const lines = [head]
-  if (c.importInPackage) lines.push(`  inside ${c.package}: from "${c.importInPackage}"`)
+  if (c.importInPackage) lines.push(c.importInPackage.startsWith('./') ? `  inside ${c.package}: import it with a relative path (${c.path})` : `  inside ${c.package}: from "${c.importInPackage}"`)
   if (desc) lines.push(`  ${desc}`)
   if (Object.keys(c.variants ?? {}).length) lines.push(`  variants: ${Object.entries(c.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')}`)
   if (detail) {
@@ -114,7 +114,7 @@ export function formatComponent(c, { detail = false } = {}) {
     if (Object.keys(c.props ?? {}).length) lines.push(`  props: ${Object.entries(c.props).map(([k, v]) => `${k}: ${v}`).join('; ')}`)
     if (c.uses?.length) lines.push(`  built on: ${c.uses.join(', ')}`)
     if (c.example) lines.push(`  example: ${c.example}`)
-    lines.push(`  file: ${c.path}${c.usedIn?.length ? ` · e.g. used in ${c.usedIn.slice(0, 3).join(', ')}` : ''}`)
+    lines.push(`  ${c.category === 'library' ? `library: ${c.import}` : `file: ${c.path}`}${c.usedIn?.length ? ` · e.g. used in ${c.usedIn.slice(0, 3).join(', ')}` : ''}`)
   }
   return lines.join('\n')
 }

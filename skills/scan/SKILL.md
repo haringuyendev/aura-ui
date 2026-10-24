@@ -13,6 +13,7 @@ Run from the repo root (it has `.aura/`; if not, use the `aura-ui:init` skill). 
 | Summary of the design system and components (what agents get at session start) | `node .aura/bin/aura.mjs status` |
 | Full rescan (after a big refactor, branch switch, merge, or if results look stale) | `node .aura/bin/aura.mjs scan` |
 | Colors, fonts, radius, status tokens and which are text-safe | `node .aura/bin/aura.mjs tokens` |
+| What Aura couldn't detect here, and the rules.json key that fixes it | `node .aura/bin/aura.mjs doctor` |
 | Findings per rule (new vs existing) and the files with the most | `node .aura/bin/aura.mjs stats` |
 | Accept the current findings as existing (hooks then block only new ones) | `node .aura/bin/aura.mjs baseline` |
 

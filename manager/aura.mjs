@@ -7,6 +7,7 @@
 //   aura tokens                     colors, fonts, radius, status/chart tokens (and which are text-safe)
 //   aura status                     project summary (what agents get at session start)
 //   aura check [files…] [--changed] [--existing] [--json]   run the rules; exit 1 on new errors
+//   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
 //   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
 //   aura describe --from <file.json> describe many at once: [{ name, summary, use_when, avoid_when, keywords, example }]
@@ -50,13 +51,52 @@ function summary(ctx, profile, registry) {
     `Aura manages UI components in this repo (${p.repo}). Ask it instead of scanning component folders:`,
     `  node .aura/bin/aura.mjs find "<what you need>"   ·   show <Name>   ·   tokens   ·   check <file>`,
     `Stack: ${list(p.stack.framework)} · ${list(p.stack.styling)} · UI: ${list(p.stack.ui)} · icons: ${list(p.stack.icons)}${p.stack.cms ? ` · CMS: ${list(p.stack.cms)}` : ''}`,
-    `Tokens: ${list(p.tokens.files)} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
+    `Tokens: ${list([...p.tokens.files, ...(p.tokens.tailwindConfigs ?? [])])}${p.tokens.themeFiles?.length ? ` · theme in code: ${p.tokens.themeFiles.join(', ')} (style through the library's theme props/tokens, not classes)` : ''} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
     p.workspaces?.length ? `Monorepo: ${p.workspaces.length} packages (${p.workspaces.map((w) => w.dir).join(', ')}). Import a package's components by its public path (e.g. "${registry.components.find((c) => c.package && c.importInPackage)?.import ?? '@scope/ui/components/button'}"); inside that package use its local path (show prints both).` : '',
-    `Components (${registry.components.length}): ${p.components.primitives.length} primitives in ${p.components.uiDir ?? '? (set "primitivesDir" in .aura/rules.json)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
+    `Components (${registry.components.length}): ${p.components.uiDir ? `${p.components.primitives.length} primitives in ${p.components.uiDir}` : registry.library?.length ? 'primitives come from the UI library (below)' : 'no primitives folder (see aura doctor)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
+    registry.library?.length ? `UI library components in use (the project's primitives too; import from the library): ${registry.library.slice(0, 16).map((c) => `${c.name}(${c.usedBy})`).join(', ')} — from ${[...new Set(registry.library.map((c) => c.import.split('/').slice(0, c.import.startsWith('@') ? 2 : 1).join('/')))].join(', ')}` : '',
     p.conventions.length ? `Conventions: ${p.conventions.join(' · ')}` : '',
     `Rules: reuse existing components (duplicates are blocked), only defined color tokens, no second UI library; after creating a component, describe it with "aura describe".`,
     `Skills: aura-ui:find (pick components) · aura-ui:check (when a hook blocks) · aura-ui:describe · aura-ui:build (design rules).`,
   ].filter(Boolean).join('\n')
+}
+
+/**
+ * What Aura couldn't work out in this repo, each with the fix (usually a key in .aura/rules.json).
+ * Agents run this after init and adapt the config, so Aura fits any repo layout.
+ */
+function doctor(ctx, r) {
+  const notes = [], comps = r.registry.components, lib = r.registry.library ?? [], t = r.tokens
+  const uiFramework = ['react', 'vue', 'svelte', 'solid-js', 'preact'].some((d) => ctx.deps[d])
+  if (!uiFramework) notes.push(ctx.deps['@angular/core'] ? 'Angular project: Aura analyses React/Vue/Svelte components only; registry and checks will be sparse.' : 'No React/Vue/Svelte dependency found in any package.json; is this the right folder? (In a monorepo, run from the root.)')
+  if (!comps.length) notes.push('No components registered. If components live in an unusual place or extension, set "primitivesDir" (and check the folder is not git-ignored build output).')
+  if (!ctx.uiDir && !lib.length) {
+    // Suggest the folder whose components are imported the most.
+    const byDir = {}
+    for (const c of comps) { const d = path.dirname(c.path); byDir[d] = (byDir[d] ?? 0) + (c.usedBy ?? 0) }
+    const top = Object.entries(byDir).sort((a, b) => b[1] - a[1]).slice(0, 3).filter(([, n]) => n > 0)
+    notes.push(`No primitives folder found (shadcn components.json, components/ui, a ui/design-system package). If the project has base components, set "primitivesDir"${top.length ? `; most-imported folders: ${top.map(([d, n]) => `${d} (${n} imports)`).join(', ')}` : ''}.`)
+  }
+  if (!t.colors.length) notes.push(t.themeFiles?.length ? `Theme is defined in code (${t.themeFiles[0]}); class-based token checks are skipped. Styling should go through the library's theme tokens.` : ctx.deps.tailwindcss ? 'Tailwind without custom color tokens: undefined-token is skipped (only raw-color warns). If tokens live in a CSS file Aura did not read, set "tokenFiles".' : 'No design tokens found (CSS variables, Tailwind config or theme file). Set "tokenFiles" if they exist.')
+  else if (!t.darkSelector) notes.push('No dark-mode token block found (.dark / [data-theme=dark]); fine if the app has no dark mode.')
+  const missingStatus = Object.entries(t.status ?? {}).filter(([, v]) => !v.token).map(([k]) => k)
+  if (t.colors.length && missingStatus.length) notes.push(`No ${missingStatus.join('/')} status token: screens may hard-code those colors. Consider adding them to ${t.files[0] ?? 'the token file'}.`)
+  // Local-looking imports that didn't resolve point at aliases Aura doesn't know.
+  const unresolved = {}
+  for (const c of comps.slice(0, 400)) {
+    const abs = path.join(ctx.repo, c.path)
+    const src = (() => { try { return fs.readFileSync(abs, 'utf8') } catch { return '' } })()
+    for (const m of src.matchAll(/from\s+['"]([^'"]+)['"]/g)) {
+      const spec = m[1]
+      if (!/^(\.|#|~|@\/|\$)/.test(spec) || ctx.resolveImport(spec, abs)) continue
+      const key = spec.startsWith('.') ? 'relative paths' : spec.split('/')[0]
+      unresolved[key] = (unresolved[key] ?? 0) + 1
+    }
+  }
+  const un = Object.entries(unresolved).filter(([k, n]) => k !== 'relative paths' && n >= 3)
+  if (un.length) notes.push(`Imports Aura can't resolve: ${un.map(([k, n]) => `${k}/… (${n})`).join(', ')}. Usage counts miss them; add the alias to tsconfig "paths" or package.json "imports" (Aura reads both).`)
+  if (ctx.monorepo && !ctx.uiDir && lib.length === 0) notes.push('Monorepo without a detected UI package: set "primitivesDir" to the shared components folder.')
+  return notes
 }
 
 function state(ctx, r) {
@@ -122,6 +162,8 @@ async function main() {
     if (!has('scripts')) console.log(`package.json left untouched. Team members run: node .aura/bin/aura.mjs check --changed (or re-run init with --scripts to add "aura" / "aura:check").`)
     const nested = ctx.workspaces.filter((w) => fs.existsSync(path.join(ctx.repo, w.dir, '.aura', 'registry.json'))).map((w) => `${w.dir}/.aura`)
     if (nested.length) console.log(`Note: ${nested.join(', ')} from an earlier per-package init is now redundant (this root registry covers every package); delete it.`)
+    const notes = doctor(ctx, r)
+    if (notes.length) console.log(`\nCheck these (fix in .aura/rules.json, then aura scan; aura doctor re-checks):\n${notes.map((n) => `- ${n}`).join('\n')}`)
     if (existing !== null) console.log(`Baseline: ${existing} existing finding(s) recorded; hooks will only block new ones (see: aura check).`)
     console.log(`${r.registry.components.length} components registered, ${r.registry.components.filter((c) => !c.described).length} without a description yet.`)
     return
@@ -129,16 +171,20 @@ async function main() {
 
   requireInit(ctx)
   const r = refresh(ctx, { full: cmd === 'scan' })
-  const byName = (n) => r.registry.components.find((c) => c.name.toLowerCase() === n.toLowerCase()) ?? r.registry.components.find((c) => c.exports.some((e) => e.toLowerCase() === n.toLowerCase()))
+  const everything = [...r.registry.components, ...(r.registry.library ?? [])]
+  const byName = (n) => everything.find((c) => c.name.toLowerCase() === n.toLowerCase()) ?? everything.find((c) => c.exports.some((e) => e.toLowerCase() === n.toLowerCase()))
 
-  if (cmd === 'scan' || cmd === 'status') {
+  if (cmd === 'doctor') {
+    const notes = doctor(ctx, r)
+    console.log(notes.length ? `aura doctor:\n${notes.map((n) => `- ${n}`).join('\n')}\nConfig keys (.aura/rules.json): primitivesDir, tokenFiles, allowUiLibraries, rules, cli.` : 'aura doctor: detection looks complete.')
+  } else if (cmd === 'scan' || cmd === 'status') {
     console.log(summary(ctx, loadProfile(ctx), r.registry))
     const { added, removed, updated, moved } = r.changes
     if (added.length + removed.length + updated.length + moved.length) console.log(`\nChanges since last scan: +${added.length} −${removed.length} ~${updated.length} moved ${moved.length}`)
   } else if (cmd === 'find') {
     const q = positional.join(' ')
     if (!q) return console.error('usage: aura find <what you need>')
-    const { results, aura } = findComponents(r.registry, q)
+    const { results, aura } = findComponents({ components: everything }, q)
     if (!results.length) console.log(`No component in this project matches "${q}".`)
     for (const { component, why } of results) console.log(formatComponent(component) + (why.length ? `\n  (${why.join(', ')})` : ''))
     if (aura.length) {
@@ -158,18 +204,18 @@ async function main() {
     const c = byName(positional[0] ?? '')
     if (!c) return console.log(`Unknown component "${positional[0]}"`)
     const cache = JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8'))
-    const users = Object.entries(cache.files).filter(([, e]) => e.imports.includes(c.path)).map(([p]) => p)
+    const users = Object.entries(cache.files).filter(([, e]) => e.imports.includes(c.path) || e.lib?.includes(c.path)).map(([p]) => p)
     console.log(`${c.name} is imported by ${users.length} file(s):\n${users.map((u) => '  ' + u).join('\n')}`)
   } else if (cmd === 'tokens') {
     const t = r.tokens
-    console.log(`Token files: ${t.files.join(', ')}${t.tailwindConfig ? ` + ${t.tailwindConfig}` : ''} · dark selector: ${t.darkSelector ?? 'none'} · radius: ${t.radius}`)
-    console.log(`Colors (bg-/text-/border-…): ${t.colors.join(', ')}`)
+    console.log(`Token files: ${[...t.files, ...(t.tailwindConfigs ?? [])].join(', ') || '—'}${t.themeFiles?.length ? ` · theme in code: ${t.themeFiles.join(', ')}` : ''} · dark selector: ${t.darkSelector ?? 'none'} · radius: ${t.radius}`)
+    console.log(`Colors (bg-/text-/border-…): ${t.colors.join(', ') || '— (no color tokens found; undefined-token is skipped)'}${t.colorPrefixes?.length ? ` · any shade of: ${t.colorPrefixes.join(', ')}` : ''}`)
     console.log(`Fonts: ${Object.entries(t.fonts).map(([k, v]) => `font-${k} = ${v.split(',')[0]}`).join(', ')}`)
     for (const [role, s] of Object.entries(t.status)) console.log(`Status ${role}: ${s.token ? `${s.token} (${s.contrastOnBackground}:1 on background${s.textSafe ? ', text-safe' : `, background/tint only${s.textToken ? `; for text use ${s.textToken}` : ''}`})` : 'missing'}`)
     console.log(`Chart tokens: ${t.chartTokens}/5${t.customUtilities.length ? ` · custom utilities: ${t.customUtilities.join(', ')}` : ''}`)
   } else if (cmd === 'check' || cmd === 'stats') {
     const scope = has('changed') ? 'changed files (git status)' : positional.length ? positional.join(', ') : `all ${r.registry.components.length} registered components`
-    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx']) : [p])) : r.registry.components.map((c) => path.join(ctx.repo, c.path))).filter((t) => ctx.isComponentPath(t))
+    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx', '.vue', '.svelte']) : [p])) : r.registry.components.map((c) => path.join(ctx.repo, c.path))).filter((t) => ctx.isComponentPath(t))
     const st = state(ctx, r)
     const all = targets.map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) }) }))
     if (cmd === 'stats') {
@@ -202,7 +248,7 @@ async function main() {
     const reg = JSON.parse(fs.readFileSync(files(ctx).registry, 'utf8'))
     const done = [], unknown = []
     for (const it of items) {
-      const c = byName(it.name ?? '') , e = c && reg.components.find((x) => x.path === (it.path ?? c.path))
+      const c = byName(it.name ?? ''), e = c && [...reg.components, ...(reg.library ?? [])].find((x) => x.path === (it.path ?? c.path))
       if (!e) { unknown.push(it.name); continue }
       const list = (v) => (Array.isArray(v) ? v : String(v).split(/\s*[;,]\s*/)).filter(Boolean)
       if (it.summary) e.summary = it.summary
@@ -219,7 +265,7 @@ async function main() {
     const c = byName(positional[0] ?? '')
     if (!c) return console.error(`Unknown component "${positional[0]}"`)
     const reg = JSON.parse(fs.readFileSync(files(ctx).registry, 'utf8'))
-    const e = reg.components.find((x) => x.path === c.path)
+    const e = [...reg.components, ...(reg.library ?? [])].find((x) => x.path === c.path)
     if (flag('summary')) e.summary = flag('summary')
     if (flag('use')) e.use_when = flag('use').split(/\s*;\s*/).filter(Boolean)
     if (flag('avoid')) e.avoid_when = flag('avoid')
