@@ -47,6 +47,7 @@ export function analyseComponent(ctx, abs, src) {
     category,
     path: ctx.rel(abs),
     import: ctx.importPathFor(abs),
+    ...(ctx.monorepo && { package: ctx.packageOf(abs), ...(ctx.localImportFor(abs) !== ctx.importPathFor(abs) && { importInPackage: ctx.localImportFor(abs) }) }),
     exports,
     props: propsOf(src),
     variants,

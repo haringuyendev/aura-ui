@@ -70,10 +70,16 @@ export function refresh(ctx, { full = false } = {}) {
   // Seed descriptions from the aura catalog for primitives/blocks with the same name (shadcn-style files),
   // so a fresh registry is already searchable in Vietnamese. Marked source: 'aura-catalog'.
   const catalog = new Map(loadAuraCatalog().filter((e) => e.kind !== 'util').map((e) => [e.name, e]))
+  // Catalog-seeded entries are re-seeded each refresh (catalog updates reach them); the file must share an
+  // export with the catalog entry, so a same-named but different component isn't mislabelled.
   for (const c of components.values()) {
-    if (c.described) continue
+    if (c.described && c.describedBy !== 'aura-catalog') continue
     const e = (c.category === 'primitive' || /\/blocks\//.test(c.path)) && catalog.get(c.name)
-    if (!e) continue
+    const shared = e ? c.exports.filter((x) => (e.exports ?? []).includes(x)).length : 0
+    if (!e || (e.exports?.length && shared < Math.min(2, e.exports.filter((x) => /^[A-Z]/.test(x)).length))) {
+      if (c.describedBy === 'aura-catalog') for (const k of ENRICH) delete c[k]
+      continue
+    }
     Object.assign(c, { summary: e.summary, use_when: e.use_when, avoid_when: e.avoid_when, extra_keywords: e.keywords, described: true, describedBy: 'aura-catalog' })
   }
 
@@ -112,6 +118,7 @@ function buildProfile(ctx, tokens, list, now) {
     repo: path.basename(ctx.repo),
     updatedAt: now,
     stack: Object.fromEntries(Object.entries(ctx.stack).filter(([, v]) => (Array.isArray(v) ? v.length : v))),
+    ...(ctx.workspaces.length && { workspaces: ctx.workspaces }),
     shadcn: ctx.shadcn && { style: ctx.shadcn.style, css: ctx.shadcn.tailwind?.css, aliases: ctx.shadcn.aliases },
     tokens: { files: tokens.files, tailwindConfig: tokens.tailwindConfig, darkSelector: tokens.darkSelector, colors: tokens.colors, fonts: tokens.fonts, radius: tokens.radius, status: tokens.status, chartTokens: tokens.chartTokens },
     components: {
@@ -119,6 +126,7 @@ function buildProfile(ctx, tokens, list, now) {
       primitives: list.filter((c) => c.category === 'primitive').map((c) => c.name),
       components: list.filter((c) => c.category === 'component').length,
       sections: list.filter((c) => c.category === 'section' && /\/(Component|index)\.(tsx|jsx)$/.test(c.path)).map((c) => c.name).sort(),
+      sectionFiles: list.filter((c) => c.category === 'section').length,
       undescribed: list.filter((c) => !c.described).length,
     },
     conventions,

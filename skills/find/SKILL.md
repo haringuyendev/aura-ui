@@ -22,7 +22,9 @@ node .aura/bin/aura.mjs tokens                    # color/font/status tokens; wh
 ```
 
 How to use the answers:
-1. **Pick the top result that fits** and import it exactly as shown (`import { … } from "…"`). Results
+1. **Pick the top result that fits** and import it exactly as shown (`import { … } from "…"`). In a
+   monorepo that is the package's public path; inside that package itself use the `inside <package>:` path.
+   A result marked `<package> only` lives in one app and can't be imported from another. Results
    marked `(wraps input)` are project components built on that primitive: prefer them when they already do
    what you need (e.g. a form field that wraps `Input`).
 2. Before writing JSX, `show` the component for its props and variants, and open one file from "used in" to

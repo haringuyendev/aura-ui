@@ -23,8 +23,49 @@ function configColorKeys(src) {
   return keys
 }
 
+// Tailwind itself and animation helpers define palette/utility variables, not the project's tokens.
+const SKIP_IMPORT = /^(tailwindcss|tw-animate-css|tailwindcss-animate|@tailwindcss\/)/
+
+/** Resolve a CSS @import: relative, workspace package (via exports), or a package in node_modules. */
+function resolveCssImport(ctx, spec, fromFile) {
+  if (/^(url\(|https?:)/.test(spec) || SKIP_IMPORT.test(spec)) return null
+  const tryFile = (p) => [p, p + '.css', path.join(p, 'index.css')].find((c) => { try { return fs.statSync(c).isFile() } catch { return false } })
+  if (spec.startsWith('.') || spec.startsWith('/')) return tryFile(path.resolve(path.dirname(fromFile), spec)) ?? null
+  const ws = ctx.resolvePackageSpec?.(spec)
+  if (ws) return tryFile(ws) ?? null
+  const name = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]
+  for (let dir = path.dirname(fromFile); ; dir = path.dirname(dir)) {
+    const pkgDir = path.join(dir, 'node_modules', name)
+    if (fs.existsSync(pkgDir)) {
+      const sub = spec.slice(name.length)
+      if (sub) return tryFile(path.join(pkgDir, sub)) ?? null
+      const pj = (() => { try { return JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf8')) } catch { return {} } })()
+      const style = pj.style ?? (typeof pj.exports?.['.'] === 'object' ? pj.exports['.'].style : null)
+      return style ? tryFile(path.join(pkgDir, style)) ?? null : null
+    }
+    if (dir === path.dirname(dir)) return null
+  }
+}
+
+/** CSS files with tokens: tokenFiles from .aura/rules.json, or every .css in the repo, plus what they @import. */
+function tokenCssFiles(ctx) {
+  const start = ctx.config?.tokenFiles?.length
+    ? ctx.config.tokenFiles.map((f) => path.resolve(ctx.repo, f)).filter((f) => fs.existsSync(f))
+    : ctx.walk(ctx.repo, ['.css']).filter((f) => !/\.module\.css$/.test(f))
+  const seen = new Set(), out = []
+  const visit = (f) => {
+    const real = fs.realpathSync(f)
+    if (seen.has(real)) return
+    seen.add(real)
+    out.push(f)
+    for (const m of read(f).matchAll(/@import\s+(?:url\()?['"]([^'"]+)['"]/g)) { const t = resolveCssImport(ctx, m[1], f); if (t) visit(t) }
+  }
+  start.forEach(visit)
+  return out
+}
+
 export function scanTokens(ctx) {
-  const cssFiles = ctx.walk(ctx.repo, ['.css']).filter((f) => !/\.module\.css$/.test(f))
+  const cssFiles = tokenCssFiles(ctx)
   const t = { files: [], light: {}, dark: {}, theme: {}, darkSelector: null }
   for (const f of cssFiles) {
     const s = read(f).replace(/\/\*[\s\S]*?\*\//g, '')
@@ -33,7 +74,7 @@ export function scanTokens(ctx) {
     const darkMatch = s.match(/(?:^|\n)\s*((?:\.dark|\[data-theme=['"]?dark['"]?\]|:root\.dark|html\.dark)[^{};()]*)\{([^{}]*)\}/)
     const theme = Object.assign({}, ...blocks(s, '@theme(?:\\s+inline)?').map(decls))
     if (!Object.keys(light).length && !Object.keys(theme).length) continue
-    t.files.push(ctx.rel(f))
+    t.files.push(f.startsWith(ctx.repo + path.sep) ? ctx.rel(f) : f)
     Object.assign(t.light, light)
     Object.assign(t.theme, theme)
     if (darkMatch) { Object.assign(t.dark, decls(darkMatch[2])); t.darkSelector ??= darkMatch[1].trim().replace(/\s+/g, ' ') }
@@ -69,7 +110,7 @@ export function scanTokens(ctx) {
     radius: t.light['--radius'] ?? t.theme['--radius'] ?? null,
     status,
     chartTokens: [1, 2, 3, 4, 5].filter((i) => t.light[`--chart-${i}`]).length,
-    mtimes: Object.fromEntries([...cssFiles, ...(tailwindConfig ? [path.join(ctx.repo, tailwindConfig)] : [])].map((f) => [ctx.rel(f), fs.statSync(f).mtimeMs])),
+    mtimes: Object.fromEntries([...cssFiles, ...(tailwindConfig ? [path.join(ctx.repo, tailwindConfig)] : [])].map((f) => [path.relative(ctx.repo, f), fs.statSync(f).mtimeMs])),
   }
 }
 

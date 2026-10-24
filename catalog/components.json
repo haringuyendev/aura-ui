@@ -1140,7 +1140,11 @@
       "multi select",
       "typeahead",
       "tìm và chọn",
-      "chọn nhiều"
+      "chọn nhiều",
+      "ô chọn có tìm kiếm",
+      "chọn có tìm kiếm",
+      "select có tìm kiếm",
+      "gõ để tìm"
     ],
     "example": "<Combobox items={products}><ComboboxInput placeholder=\"Chọn sản phẩm\" /><ComboboxContent><ComboboxList>{(p) => <ComboboxItem value={p}>{p.name}</ComboboxItem>}</ComboboxList></ComboboxContent></Combobox>",
     "related": [

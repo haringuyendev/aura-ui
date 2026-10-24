@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 // Aura: the project's component UI manager.
-//   aura init [--no-scripts]        scan the repo, create .aura/ (registry, profile, rules), vendor the CLI, wire npm script
+//   aura init [--scripts]          scan the repo (a monorepo from its root), create .aura/, vendor the CLI; re-run to refresh bin/
 //   aura find <need…>               components in this project that fit ("ô nhập liệu", "date range", "confirm dialog")
-//   aura show <name>                props, variants, description, where it is used
+//   aura show <name>                props, variants, description, import path(s), where it is used
 //   aura usage <name>               files that import it
 //   aura tokens                     colors, fonts, radius, status/chart tokens (and which are text-safe)
 //   aura status                     project summary (what agents get at session start)
-//   aura check [files…] [--changed] [--json]   run the rules; exit 1 on errors
+//   aura check [files…] [--changed] [--existing] [--json]   run the rules; exit 1 on new errors
+//   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
+//   aura describe --from <file.json> describe many at once: [{ name, summary, use_when, avoid_when, keywords, example }]
 //   aura baseline                   accept current findings as existing (hooks then block only new ones)
 //   aura scan                       full rescan (normally not needed: every command refreshes incrementally)
 //   aura hook <session-start|post-edit|post-bash|stop|skill-nudge>   called by agent hooks with the event JSON on stdin
 import fs from 'node:fs'
 import path from 'node:path'
-import { execSync } from 'node:child_process'
+import { execSync, spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { createContext } from './context.mjs'
+import { createContext, workspaceDirs } from './context.mjs'
 import { files, isInitialised, loadProfile, refresh } from './registry.mjs'
 import { DEFAULT_RULES, applyBaseline, checkFile, formatFindings, hasErrors, loadBaseline, loadRules, snapshotBaseline } from './check.mjs'
 import { findComponents, formatComponent } from './find.mjs'
@@ -25,16 +27,19 @@ const argv = process.argv.slice(2)
 const cmd = argv[0]
 const flag = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined }
 const has = (name) => argv.includes(`--${name}`)
-const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--no-scripts', '--full'].includes(all[i - 1])))
+const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full'].includes(all[i - 1])))
 
+/** The nearest folder with .aura/ going up; else the monorepo root (package.json workspaces); else the nearest package.json. */
 function findRepoRoot(start) {
-  let dir = path.resolve(start)
+  let dir = path.resolve(start), nearest = null, workspaceRoot = null
   for (;;) {
-    if (fs.existsSync(path.join(dir, '.aura', 'registry.json')) || fs.existsSync(path.join(dir, 'package.json'))) return dir
+    if (fs.existsSync(path.join(dir, '.aura', 'registry.json'))) return dir
+    if (fs.existsSync(path.join(dir, 'package.json'))) { nearest ??= dir; if (workspaceDirs(dir).length) workspaceRoot = dir }
     const up = path.dirname(dir)
-    if (up === dir) return path.resolve(start)
+    if (fs.existsSync(path.join(dir, '.git')) || up === dir) break
     dir = up
   }
+  return workspaceRoot ?? nearest ?? path.resolve(start)
 }
 
 function summary(ctx, profile, registry) {
@@ -46,7 +51,8 @@ function summary(ctx, profile, registry) {
     `  node .aura/bin/aura.mjs find "<what you need>"   ·   show <Name>   ·   tokens   ·   check <file>`,
     `Stack: ${list(p.stack.framework)} · ${list(p.stack.styling)} · UI: ${list(p.stack.ui)} · icons: ${list(p.stack.icons)}${p.stack.cms ? ` · CMS: ${list(p.stack.cms)}` : ''}`,
     `Tokens: ${list(p.tokens.files)} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
-    `Components: ${p.components.primitives.length} primitives in ${p.components.uiDir ?? '?'}, ${p.components.components} shared, ${p.components.sections.length} sections. Most used: ${top}`,
+    p.workspaces?.length ? `Monorepo: ${p.workspaces.length} packages (${p.workspaces.map((w) => w.dir).join(', ')}). Import a package's components by its public path (e.g. "${registry.components.find((c) => c.package && c.importInPackage)?.import ?? '@scope/ui/components/button'}"); inside that package use its local path (show prints both).` : '',
+    `Components (${registry.components.length}): ${p.components.primitives.length} primitives in ${p.components.uiDir ?? '? (set "primitivesDir" in .aura/rules.json)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
     p.conventions.length ? `Conventions: ${p.conventions.join(' · ')}` : '',
     `Rules: reuse existing components (duplicates are blocked), only defined color tokens, no second UI library; after creating a component, describe it with "aura describe".`,
     `Skills: aura-ui:find (pick components) · aura-ui:check (when a hook blocks) · aura-ui:describe · aura-ui:build (design rules).`,
@@ -54,7 +60,7 @@ function summary(ctx, profile, registry) {
 }
 
 function state(ctx, r) {
-  return { registry: r.registry, tokens: r.tokens, rules: loadRules(ctx), profile: loadProfile(ctx), baseline: loadBaseline(ctx) }
+  return { registry: r.registry, tokens: r.tokens, rules: loadRules(ctx), profile: loadProfile(ctx), baseline: loadBaseline(ctx), allow: ctx.config.allowUiLibraries ?? [] }
 }
 /** Check a file and mark findings that were already there when aura was added. */
 function checkWithBaseline(ctx, st, abs, opts) {
@@ -65,7 +71,7 @@ function writeBaseline(ctx, r) {
   const entries = r.registry.components.map((c) => ({ file: c.path, findings: checkFile(ctx, st, path.join(ctx.repo, c.path)) }))
   const snap = snapshotBaseline(entries)
   fs.writeFileSync(files(ctx).baseline, JSON.stringify(snap, null, 2) + '\n')
-  return Object.values(snap.files).reduce((n, rules) => n + Object.values(rules).reduce((a, b) => a + b, 0), 0)
+  return Object.values(snap.files).reduce((n, rules) => n + Object.values(rules).reduce((a, b) => a + (typeof b === 'number' ? b : b.count), 0), 0)
 }
 
 function requireInit(ctx) {
@@ -74,7 +80,7 @@ function requireInit(ctx) {
 
 function changedFiles(ctx) {
   try {
-    const out = execSync('git status --porcelain --untracked-files=all', { cwd: ctx.repo, encoding: 'utf8' })
+    const out = execSync('git status --porcelain --untracked-files=all', { cwd: ctx.repo, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
     return out.split('\n').filter(Boolean).map((l) => l.slice(3).replace(/^"|"$/g, '').split(' -> ').pop()).map((p) => path.join(ctx.repo, p)).filter((p) => fs.existsSync(p))
   } catch { return [] }
 }
@@ -82,12 +88,18 @@ function changedFiles(ctx) {
 // ---------------- commands ----------------
 async function main() {
   if (cmd === 'hook') return hook(argv[1])
+  if (!cmd || cmd === 'help') return console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1).filter((l, i, all) => all.slice(0, i + 1).every((x) => x.startsWith('//'))).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
   const ctx = createContext(findRepoRoot(process.cwd()))
 
   if (cmd === 'init') {
+    const again = isInitialised(ctx)
     const r = refresh(ctx, { full: true })
     const f = files(ctx)
-    if (!fs.existsSync(f.rules)) fs.writeFileSync(f.rules, JSON.stringify({ $comment: 'error blocks the agent, warn reports, info hints, off disables', rules: DEFAULT_RULES }, null, 2) + '\n')
+    if (!fs.existsSync(f.rules)) fs.writeFileSync(f.rules, JSON.stringify({
+      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy)',
+      rules: DEFAULT_RULES,
+      allowUiLibraries: [],
+    }, null, 2) + '\n')
     // Vendor the CLI so the team and CI can run it without the plugin.
     const bin = path.join(ctx.auraDir, 'bin')
     fs.mkdirSync(bin, { recursive: true })
@@ -95,7 +107,7 @@ async function main() {
     const catalog = path.join(here, '..', 'catalog', 'components.json')
     if (fs.existsSync(catalog)) fs.copyFileSync(catalog, path.join(bin, 'aura-catalog.json'))
     fs.writeFileSync(path.join(ctx.auraDir, '.gitignore'), 'cache/\n')
-    if (!has('no-scripts') && ctx.pkg && fs.existsSync(path.join(ctx.repo, 'package.json'))) {
+    if (has('scripts') && ctx.pkg && fs.existsSync(path.join(ctx.repo, 'package.json'))) {
       const pkgPath = path.join(ctx.repo, 'package.json')
       const raw = fs.readFileSync(pkgPath, 'utf8')
       const pkg = JSON.parse(raw)
@@ -106,7 +118,10 @@ async function main() {
     }
     const existing = fs.existsSync(files(ctx).baseline) ? null : writeBaseline(ctx, r)
     console.log(summary(ctx, loadProfile(ctx), r.registry))
-    console.log(`\nCreated .aura/ (registry.json, profile.json, rules.json, baseline.json, bin/). Commit it; .aura/cache is ignored.`)
+    console.log(again ? `\nUpdated .aura/ (rescanned, bin/ refreshed from the plugin; rules and baseline kept).` : `\nCreated .aura/ (registry.json, profile.json, rules.json, baseline.json, bin/). Commit it; .aura/cache is ignored.`)
+    if (!has('scripts')) console.log(`package.json left untouched. Team members run: node .aura/bin/aura.mjs check --changed (or re-run init with --scripts to add "aura" / "aura:check").`)
+    const nested = ctx.workspaces.filter((w) => fs.existsSync(path.join(ctx.repo, w.dir, '.aura', 'registry.json'))).map((w) => `${w.dir}/.aura`)
+    if (nested.length) console.log(`Note: ${nested.join(', ')} from an earlier per-package init is now redundant (this root registry covers every package); delete it.`)
     if (existing !== null) console.log(`Baseline: ${existing} existing finding(s) recorded; hooks will only block new ones (see: aura check).`)
     console.log(`${r.registry.components.length} components registered, ${r.registry.components.filter((c) => !c.described).length} without a description yet.`)
     return
@@ -152,15 +167,54 @@ async function main() {
     console.log(`Fonts: ${Object.entries(t.fonts).map(([k, v]) => `font-${k} = ${v.split(',')[0]}`).join(', ')}`)
     for (const [role, s] of Object.entries(t.status)) console.log(`Status ${role}: ${s.token ? `${s.token} (${s.contrastOnBackground}:1 on background${s.textSafe ? ', text-safe' : `, background/tint only${s.textToken ? `; for text use ${s.textToken}` : ''}`})` : 'missing'}`)
     console.log(`Chart tokens: ${t.chartTokens}/5${t.customUtilities.length ? ` · custom utilities: ${t.customUtilities.join(', ')}` : ''}`)
-  } else if (cmd === 'check') {
-    const targets = has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)) : r.registry.components.map((c) => path.join(ctx.repo, c.path))
+  } else if (cmd === 'check' || cmd === 'stats') {
+    const scope = has('changed') ? 'changed files (git status)' : positional.length ? positional.join(', ') : `all ${r.registry.components.length} registered components`
+    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx']) : [p])) : r.registry.components.map((c) => path.join(ctx.repo, c.path))).filter((t) => ctx.isComponentPath(t))
     const st = state(ctx, r)
-    const report = targets.filter((t) => ctx.isComponentPath(t)).map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) }) })).filter((x) => x.findings.length)
+    const all = targets.map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) }) }))
+    if (cmd === 'stats') {
+      // Findings per rule, split into new and existing (baseline), plus the files with the most.
+      const rows = {}
+      for (const { findings } of all) for (const f of findings) { const row = (rows[f.rule] ??= { severity: f.severity, new: 0, existing: 0, files: 0 }); row[f.existing ? 'existing' : 'new']++ }
+      for (const { findings } of all) for (const rule of new Set(findings.map((f) => f.rule))) rows[rule].files++
+      if (has('json')) return console.log(JSON.stringify(rows, null, 2))
+      console.log(`aura stats (${scope}, ${targets.length} files)`)
+      for (const [rule, x] of Object.entries(rows).sort((a, b) => b[1].new - a[1].new)) console.log(`  ${rule.padEnd(22)} ${x.severity.padEnd(5)} new ${String(x.new).padStart(4)} · existing ${String(x.existing).padStart(4)} · in ${x.files} files`)
+      const worst = all.map((x) => [x.file, x.findings.filter((f) => !f.existing).length]).filter(([, n]) => n).sort((a, b) => b[1] - a[1]).slice(0, 5)
+      if (worst.length) console.log(`Most new findings: ${worst.map(([f, n]) => `${f} (${n})`).join(', ')}`)
+      return
+    }
+    // Default: only what needs action; --existing adds baseline findings (with their current lines).
+    const report = all.map((x) => ({ ...x, findings: has('existing') ? x.findings : x.findings.filter((f) => !f.existing) })).filter((x) => x.findings.length)
     if (has('json')) console.log(JSON.stringify(report, null, 2))
-    else console.log(report.length ? report.map((x) => formatFindings(x.file, x.findings)).join('\n') : 'aura check: no findings')
+    else {
+      const hidden = all.reduce((n, x) => n + x.findings.filter((f) => f.existing).length, 0)
+      console.log(`aura check: ${scope}, ${targets.length} files${!has('existing') && hidden ? ` (${hidden} existing finding(s) from the baseline hidden; --existing lists them, stats counts them)` : ''}`)
+      console.log(report.length ? report.map((x) => formatFindings(x.file, x.findings)).join('\n') : 'no findings')
+    }
     if (report.some((x) => hasErrors(x.findings))) process.exitCode = 1
   } else if (cmd === 'baseline') {
     console.log(`Baseline updated: ${writeBaseline(ctx, r)} finding(s) accepted as existing.`)
+  } else if (cmd === 'describe' && flag('from')) {
+    // Bulk: a JSON array (or { name: {…} } map) of { name, summary, use_when, avoid_when, keywords, example }.
+    const raw = JSON.parse(fs.readFileSync(path.resolve(flag('from')), 'utf8'))
+    const items = Array.isArray(raw) ? raw : Object.entries(raw).map(([name, v]) => ({ name, ...v }))
+    const reg = JSON.parse(fs.readFileSync(files(ctx).registry, 'utf8'))
+    const done = [], unknown = []
+    for (const it of items) {
+      const c = byName(it.name ?? '') , e = c && reg.components.find((x) => x.path === (it.path ?? c.path))
+      if (!e) { unknown.push(it.name); continue }
+      const list = (v) => (Array.isArray(v) ? v : String(v).split(/\s*[;,]\s*/)).filter(Boolean)
+      if (it.summary) e.summary = it.summary
+      if (it.use_when ?? it.use) e.use_when = list(it.use_when ?? it.use)
+      if (it.avoid_when ?? it.avoid) e.avoid_when = String(it.avoid_when ?? it.avoid)
+      if (it.keywords ?? it.extra_keywords) e.extra_keywords = list(it.keywords ?? it.extra_keywords)
+      if (it.example) e.example = it.example
+      Object.assign(e, { described: true, describedBy: 'agent' })
+      done.push(e.name)
+    }
+    fs.writeFileSync(files(ctx).registry, JSON.stringify(reg, null, 2) + '\n')
+    console.log(`Described ${done.length} component(s).${unknown.length ? ` Unknown: ${unknown.join(', ')}` : ''}`)
   } else if (cmd === 'describe') {
     const c = byName(positional[0] ?? '')
     if (!c) return console.error(`Unknown component "${positional[0]}"`)
@@ -176,7 +230,7 @@ async function main() {
     fs.writeFileSync(files(ctx).registry, JSON.stringify(reg, null, 2) + '\n')
     console.log(formatComponent(e, { detail: true }))
   } else {
-    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 13).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
+    console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1).filter((l, i, all) => all.slice(0, i + 1).every((x) => x.startsWith('//'))).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'))
     process.exitCode = cmd ? 2 : 0
   }
 }
@@ -191,8 +245,18 @@ async function readStdin() {
 
 async function hook(event) {
   const input = await readStdin()
-  const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd()
+  // post-edit resolves from the edited file, so a nested .aura/ (or a monorepo root) is found from any package.
+  const target = input.tool_input?.file_path ? path.resolve(input.cwd ?? process.cwd(), input.tool_input.file_path) : null
+  const root = event === 'post-edit' && target ? path.dirname(target) : process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd()
   const ctx = createContext(findRepoRoot(root))
+  // "cli": "local" in .aura/rules.json: run the repo's vendored copy (local patches) instead of this one.
+  const localCli = path.join(ctx.auraDir, 'bin', 'aura.mjs')
+  if (ctx.config.cli === 'local' && fs.existsSync(localCli) && fs.realpathSync(localCli) !== fs.realpathSync(fileURLToPath(import.meta.url))) {
+    const res = spawnSync(process.execPath, [localCli, 'hook', event], { input: JSON.stringify(input), encoding: 'utf8' })
+    process.stdout.write(res.stdout ?? '')
+    process.stderr.write(res.stderr ?? '')
+    process.exit(res.status ?? 0)
+  }
   const emit = (eventName, text) => text && process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: eventName, additionalContext: text.slice(0, 9500) } }))
   if (event === 'skill-nudge') {
     // Skill-scoped (once): when an aura skill edits files in a UI repo that isn't managed yet, suggest init.
@@ -223,7 +287,6 @@ async function hook(event) {
   }
 
   if (event === 'post-edit') {
-    const target = input.tool_input?.file_path ? path.resolve(input.tool_input.file_path) : null
     if (!target || !target.startsWith(ctx.repo + path.sep)) return
     const isComp = ctx.isComponentPath(target), isToken = ctx.isTokenPath(target)
     if (!isComp && !isToken) return

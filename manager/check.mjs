@@ -23,6 +23,9 @@ const PALETTE = /\b(?:bg|text|border|ring|fill|stroke|from|via|to|outline|decora
 const BUILTIN = new Set(['transparent', 'current', 'inherit', 'white', 'black', 'none'])
 const NOT_COLOR = /^(xs|sm|base|md|lg|xl|\d?xl|\d+(\.\d+)?|px|left|right|center|justify|start|end|top|bottom|clip|wrap|nowrap|balance|pretty|ellipsis|solid|dashed|dotted|double|hidden|collapse|separate|x|y|t|b|l|r|s|e|opacity|offset|inset|gradient|linear|radial|conic|cover|contain|auto|fixed|local|scroll|repeat|no|origin|blend|none|underline|overline|line|through|lowercase|uppercase|capitalize|normal|italic|thin|light|medium|semibold|bold|extrabold|clip|text|padding|content|border|box|spacing|decoration|current|inherit)$/
 const lineOf = (src, index) => src.slice(0, index).split('\n').length
+/** Blank out comments and module specifiers (same length, newlines kept) so class checks ignore "text-field.tsx" in a comment or import. */
+const codeOnly = (src) => src
+  .replace(/\/\*[\s\S]*?\*\/|(?<![:'"`\w])\/\/[^\n]*|\b(?:from|import)\s*\(?\s*['"][^'"\n]*['"]/g, (m) => m.replace(/[^\n]/g, ' '))
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/(component|comp|custom|new|base|wrapper|ui|v\d+)$/g, '')
 
 /**
@@ -35,13 +38,19 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   const out = []
   const add = (rule, line, message) => state.rules[rule] && state.rules[rule] !== 'off' && out.push({ rule, severity: state.rules[rule], line, message })
   const relPath = ctx.rel(abs)
+  // Inside the component's own package, use its local form (#components/x); elsewhere its public import.
+  const importFrom = (c) => (c.importInPackage && c.package && ctx.packageOf(abs) === c.package ? c.importInPackage : c.import)
   const colors = new Set(state.tokens.colors)
   const custom = new Set(state.tokens.customUtilities)
 
   // undefined-token: bg-/text-/border-… classes naming a color the design system doesn't define
   const seen = new Set()
-  for (const m of src.matchAll(/(?<![\w-])(?:[\w-]+:)*(bg|text|border|ring|fill|stroke|outline|decoration|divide|from|via|to)-([a-z][a-z0-9-]*?)(?:\/\d+)?(?=["'`\s}])/g)) {
-    const [whole, , name] = m
+  const code = codeOnly(src)
+  for (const m of code.matchAll(/(?<![\w-])(?:[\w-]+:)*(bg|text|border|ring|fill|stroke|outline|decoration|divide|from|via|to)-([a-z][a-z0-9-]*?)(?:\/\d+)?(?=["'`\s}])/g)) {
+    const [whole, util, raw] = m
+    // Side/offset sub-utilities carry the color after them: border-t-<c>, border-x-<c>, ring-offset-<c>, divide-x-<c>; bg-blend-* isn't a color.
+    if (util === 'bg' && /^(blend|clip|origin|gradient|linear|radial|conic)(-|$)/.test(raw)) continue
+    const name = raw.replace(util === 'ring' || util === 'outline' ? /^offset-/ : util === 'border' || util === 'divide' ? /^(?:[xytblrse]|block|inline)-/ : /^$/, '')
     const cls = whole.replace(/^(?:[\w-]+:)*/, '').replace(/\/\d+$/, '')
     if (custom.has(cls) || BUILTIN.has(name) || colors.has(name) || NOT_COLOR.test(name)) continue
     if (name.split('-').every((p) => NOT_COLOR.test(p))) continue
@@ -53,12 +62,12 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   }
 
   // raw-color
-  for (const m of src.matchAll(PALETTE)) add('raw-color', lineOf(src, m.index), `raw color class "${m[0]}". Use a semantic token (${['primary', 'muted-foreground', 'destructive'].filter((c) => colors.has(c)).join(', ') || 'see aura tokens'}).`)
+  for (const m of code.matchAll(PALETTE)) add('raw-color', lineOf(src, m.index), `raw color class "${m[0]}". Use a semantic token (${['primary', 'muted-foreground', 'destructive'].filter((c) => colors.has(c)).join(', ') || 'see aura tokens'}).`)
 
   // foreign-ui-library
   for (const spec of packageImports(src)) {
     const lib = Object.entries(UI_LIB_IMPORTS).find(([prefix]) => spec === prefix || spec.startsWith(prefix))?.[1]
-    if (lib && !ctx.usedUiLibs.has(lib)) add('foreign-ui-library', lineOf(src, src.indexOf(spec)), `imports "${spec}" (${lib}), a UI library this project doesn't use. Build it from the project's components (${state.profile?.components?.uiDir ?? 'components/ui'}).`)
+    if (lib && !ctx.usedUiLibs.has(lib) && !(state.allow ?? []).some((a) => spec === a || spec.startsWith(a.replace(/\/?$/, '/')) || a === lib)) add('foreign-ui-library', lineOf(src, src.indexOf(spec)), `imports "${spec}" (${lib}), a UI library this project doesn't use. Build it from the project's components (${state.profile?.components?.uiDir ?? 'components/ui'}).`)
   }
 
   // status-text-unsafe
@@ -81,7 +90,7 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
       if (!prim) continue
       const hits = [...src.matchAll(new RegExp(`<${tag}\\b([^>]*)>`, 'g'))].filter((x) => !(tag === 'input' && /type=["'](hidden|file|checkbox|radio)["']/.test(x[1])))
       // one finding per occurrence, so the baseline can tell a new raw element from an old one
-      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${prim.import}"${Object.keys(prim.variants ?? {}).length ? ` (variants: ${Object.entries(prim.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : ''}.`)
+      for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${Object.keys(prim.variants ?? {}).length ? ` (variants: ${Object.entries(prim.variants).map(([k, v]) => `${k}=${v.join('|')}`).join('; ')})` : ''}.`)
     }
   }
 
@@ -92,7 +101,7 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
     const dupByName = others.find((c) => norm(c.name) && norm(c.name) === norm(self.name))
     const dupByExport = others.find((c) => c.exports.some((e) => self.exports.includes(e) && !['Component', 'default'].includes(e)))
     const dup = dupByName ?? dupByExport
-    if (dup) add('duplicate-component', 1, `"${self.name}" duplicates the existing ${dup.category} "${dup.name}" (${dup.path}, used in ${dup.usedBy} files). Reuse it (import from "${dup.import}") or extend it with a variant instead of a second copy.`)
+    if (dup) add('duplicate-component', 1, `"${self.name}" duplicates the existing ${dup.category} "${dup.name}" (${dup.path}, used in ${dup.usedBy} files). Reuse it (import from "${importFrom(dup)}") or extend it with a variant instead of a second copy.`)
   }
   if (self && !self.described && (isNew || state.rules['undescribed-component'] === 'warn'))
     add('undescribed-component', 1, `"${self.name}" has no description in the registry. Run: aura describe ${self.name} --summary "…" --use "…" --avoid "…" --keywords "vi, en"`)
@@ -107,13 +116,18 @@ export function loadBaseline(ctx) {
   try { return JSON.parse(fs.readFileSync(path.join(ctx.auraDir, 'baseline.json'), 'utf8')).files ?? {} } catch { return {} }
 }
 export function applyBaseline(relPath, findings, baseline) {
-  const allowed = { ...(baseline[relPath] ?? {}) }
+  const allowed = Object.fromEntries(Object.entries(baseline[relPath] ?? {}).map(([r, v]) => [r, typeof v === 'number' ? v : v.count]))
   return findings.map((f) => (allowed[f.rule] > 0 ? (allowed[f.rule]--, { ...f, existing: true }) : f))
 }
 export function snapshotBaseline(entries) {
   const files = {}
-  for (const { file, findings } of entries) for (const f of findings) if (f.severity === 'error' || f.severity === 'warn') ((files[file] ??= {})[f.rule] = (files[file][f.rule] ?? 0) + 1)
-  return { $comment: 'Findings present when aura was added; hooks only block new ones. Refresh with: aura baseline', files }
+  for (const { file, findings } of entries)
+    for (const f of findings) if (f.severity === 'error' || f.severity === 'warn') {
+      const e = ((files[file] ??= {})[f.rule] ??= { count: 0, lines: [] })
+      e.count++
+      e.lines.push(f.line)
+    }
+  return { $comment: 'Findings present when aura was added; hooks only block new ones (matched by count per file and rule; lines are where they were). List them: aura check --existing. Refresh: aura baseline', files }
 }
 
 export const hasErrors = (findings) => findings.some((f) => f.severity === 'error' && !f.existing)
