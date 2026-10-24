@@ -1,6 +1,6 @@
 ---
 name: build
-description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a 390/768/1440 self-check. Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
+description: Build or redesign web apps, screens and dashboards that don't look AI-generated - design system first, semantic tokens only, screens composed only from the project's components, purposeful data color, band layouts for dashboards, vi-VN formatting and a rendered-page self-check with aura inspect (no screenshot judging). Works on the aura starter (Lovable-style React + Vite + Tailwind + shadcn) and on existing projects. Use when the user asks to create or change a page, screen, dashboard, form, table or prototype, or says the UI looks generic, cluttered or inconsistent.
 hooks:
   PostToolUse:
     - matcher: "Write|Edit"
@@ -26,6 +26,16 @@ hooks:
    install command.
 4. Agent hooks check every component edit. If one blocks you, follow the `aura-ui:check` skill. After
    creating a component, describe it (`aura-ui:describe`) so the next agent finds it.
+5. **Plan color and emphasis before laying out a screen** (write it down in code, not in your head):
+   - **One status map per domain.** Put every status of the domain in one `STATUS_VARIANT` (or `tone`)
+     map next to its labels and use it everywhere the status shows: waiting/pending → `warning`, in
+     progress → `info`, done/approved → `success`, cancelled/failed/overdue → `destructive`, draft →
+     `secondary`/`outline`. Five statuses in one gray outline is a defect (`aura inspect` reports it).
+   - **Pick the key numbers.** Name the 3–5 numbers the user acts on; they get the KPI treatment
+     (`text-2xl`–`3xl` semibold tabular-nums), and when one is in exception (overdue, over a limit) its
+     value or card takes the status color with the words. Zero states are muted.
+   - **Each fact lives in one block.** Decide where each fact is shown (alert list, KPI, detail list)
+     before building; a summary block links to the detail, it doesn't repeat it.
 
 ## Working in an existing project
 The project's design system wins over the starter:
@@ -151,11 +161,14 @@ Dense where the user scans many similar items, airy where they read. Cramped is 
 ## Done means
 1. `npm run build` passes with no type or CSS errors, and imports resolve.
 2. The dev server runs (`npm run dev`) and the page loads with no console errors.
-   Look at it at 390px, 768px and 1440px wide (Playwright or a browser), and look for overlapping
-   blocks, clipped text and large blank areas, not only overflow. At 390px there is no horizontal page
-   scroll and the primary data is visible without scrolling sideways: wide tables become a stacked
-   list, multi-column grids collapse to one column. Tab through the page: every interactive element,
-   including clickable rows and cards, shows a visible focus ring (`focus-visible:ring-2 ring-ring`).
+   **Check the rendered result with `aura inspect`, not by eyeballing screenshots** (`aura-ui:inspect`):
+   `node .aura/bin/aura.mjs inspect http://localhost:<port>/<route> [/other-route…]`. It opens each page at
+   1440/768/390, prints the page outline and reports layout breaks (horizontal scroll, overlap, clipped
+   text, uneven card rows), KPI emphasis, status colors, contrast, repeated content and button problems as
+   text. Fix every `[error]`, the `[warn]`s that apply, and re-run until no error is left. Take one
+   screenshot at the end only if the user wants to see it. At 390px wide tables become a stacked list
+   and multi-column grids collapse to one column. Also tab through the page: every interactive
+   element, including clickable rows and cards, shows a visible focus ring (`focus-visible:ring-2 ring-ring`).
 3. Grep your new files for raw colors and fix any hit:
    `grep -rnE "(bg|text|border|from|to|via)-(white|black|slate|gray|zinc|neutral|red|orange|amber|yellow|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|pink|rose)(-[0-9]+)?\b|#[0-9a-fA-F]{3,6}\b" src --include=*.tsx | grep -v components/ui`
 4. Tell the user the URL to open. Keep the closing message to a couple of lines.

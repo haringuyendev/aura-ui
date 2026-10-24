@@ -17,6 +17,9 @@ node .aura/bin/aura.mjs check --json      # machine-readable
 Exit code 1 when there is a new error. The first line says what was checked. `[existing]` findings come
 from the baseline and don't block.
 
+These rules read source files. How the page looks once rendered (layout, emphasis, status colors,
+repeated content) is checked by `aura inspect` (`aura-ui:inspect`).
+
 ## Fixing each rule
 | Rule | Default | Fix |
 |---|---|---|

@@ -7,6 +7,8 @@
 //   aura tokens                     colors, fonts, radius, status/chart tokens (and which are text-safe)
 //   aura status                     project summary (what agents get at session start)
 //   aura check [files…] [--changed] [--existing] [--json]   run the rules; exit 1 on new errors
+//   aura inspect <url> [/path…] [--widths 1440,768,390] [--shot] [--json]   open the pages headless and report
+//                                   layout, KPI emphasis, data color, repeated content and button problems as text
 //   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
 //   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
@@ -22,13 +24,14 @@ import { createContext, workspaceDirs } from './context.mjs'
 import { files, isInitialised, loadProfile, refresh } from './registry.mjs'
 import { DEFAULT_RULES, applyBaseline, checkFile, formatFindings, hasErrors, loadBaseline, loadRules, snapshotBaseline } from './check.mjs'
 import { findComponents, formatComponent } from './find.mjs'
+import { formatReport, inspect, resolveUrls } from './inspect.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const cmd = argv[0]
 const flag = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined }
 const has = (name) => argv.includes(`--${name}`)
-const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full'].includes(all[i - 1])))
+const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full', '--shot'].includes(all[i - 1])))
 
 /** The nearest folder with .aura/ going up; else the monorepo root (package.json workspaces); else the nearest package.json. */
 function findRepoRoot(start) {
@@ -49,7 +52,7 @@ function summary(ctx, profile, registry) {
   const top = registry.components.filter((c) => c.category !== 'section').slice(0, 14).map((c) => `${c.name}(${c.usedBy})`).join(', ')
   return [
     `Aura manages UI components in this repo (${p.repo}). Ask it instead of scanning component folders:`,
-    `  node .aura/bin/aura.mjs find "<what you need>"   ·   show <Name>   ·   tokens   ·   check <file>`,
+    `  node .aura/bin/aura.mjs find "<what you need>"   ·   show <Name>   ·   tokens   ·   check <file>   ·   inspect <url>`,
     `Stack: ${list(p.stack.framework)} · ${list(p.stack.styling)} · UI: ${list(p.stack.ui)} · icons: ${list(p.stack.icons)}${p.stack.cms ? ` · CMS: ${list(p.stack.cms)}` : ''}`,
     `Tokens: ${list([...p.tokens.files, ...(p.tokens.tailwindConfigs ?? [])])}${p.tokens.themeFiles?.length ? ` · theme in code: ${p.tokens.themeFiles.join(', ')} (style through the library's theme props/tokens, not classes)` : ''} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
     p.workspaces?.length ? `Monorepo: ${p.workspaces.length} packages (${p.workspaces.map((w) => w.dir).join(', ')}). Import a package's components by its public path (e.g. "${registry.components.find((c) => c.package && c.importInPackage)?.import ?? '@scope/ui/components/button'}"); inside that package use its local path (show prints both).` : '',
@@ -138,7 +141,7 @@ async function main() {
     const r = refresh(ctx, { full: true })
     const f = files(ctx)
     if (!fs.existsSync(f.rules)) fs.writeFileSync(f.rules, JSON.stringify({
-      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy)',
+      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy), inspect ({ baseUrl, widths, storageState, nudge, kpiRatio, minDataColor, repeatSections, maxKpis, tapTarget } for aura inspect; its rules go in "rules" too)',
       rules: DEFAULT_RULES,
       allowUiLibraries: [],
     }, null, 2) + '\n')
@@ -168,6 +171,21 @@ async function main() {
     if (notes.length) console.log(`\nCheck these (fix in .aura/rules.json, then aura scan; aura doctor re-checks):\n${notes.map((n) => `- ${n}`).join('\n')}`)
     if (existing !== null) console.log(`Baseline: ${existing} existing finding(s) recorded; hooks will only block new ones (see: aura check).`)
     console.log(`${r.registry.components.length} ${r.scope === 'primitives' ? 'primitives' : 'components'} registered${r.registry.library?.length ? ` + ${r.registry.library.length} UI library components` : ''}, ${r.registry.components.filter((c) => !c.described).length} without a description yet; ${r.uiFiles.length} UI files checked by the hooks.`)
+    return
+  }
+
+  if (cmd === 'inspect') {
+    const opts = { shot: has('shot') }
+    if (flag('widths')) opts.widths = flag('widths').split(',').map(Number).filter(Boolean)
+    if (flag('wait')) opts.wait = Number(flag('wait'))
+    if (flag('storage')) opts.storageState = flag('storage')
+    let reports
+    try { reports = await inspect(ctx, resolveUrls(positional, ctx.config.inspect?.baseUrl), opts) } catch (e) { console.error(`aura inspect: ${e.message}`); process.exit(1) }
+    if (!reports.length) return console.error('usage: aura inspect <url> [/path…] (or set "inspect": { "baseUrl": "http://localhost:5173" } in .aura/rules.json)')
+    const out = reports.map((rep) => formatReport(rep, ctx.config.rules ?? {}))
+    if (has('json')) console.log(JSON.stringify(reports.map((rep, i) => ({ url: rep.url, stats: rep.stats, outline: rep.outline, findings: out[i].findings })), null, 2))
+    else console.log(out.map((o) => o.text).join('\n\n'))
+    if (out.some((o) => o.errors)) process.exitCode = 1
     return
   }
 
@@ -284,6 +302,28 @@ async function main() {
 }
 
 // ---------------- agent hooks ----------------
+/** A running dev server for the touched files' package: inspect.baseUrl, else ports from its vite/next config and scripts, else common defaults. */
+async function devServer(ctx, touched) {
+  if (ctx.config.inspect?.baseUrl) return ctx.config.inspect.baseUrl.replace(/\/$/, '')
+  const ports = new Set()
+  for (const file of touched.slice(0, 5)) {
+    let dir = path.dirname(path.join(ctx.repo, file))
+    while (dir.startsWith(ctx.repo) && !fs.existsSync(path.join(dir, 'package.json'))) dir = path.dirname(dir)
+    for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => /^(vite|next|nuxt|astro|svelte)\.config\.|^package\.json$/.test(x)) : []) {
+      const src = fs.readFileSync(path.join(dir, f), 'utf8')
+      for (const m of src.matchAll(/(?:\bport\s*:\s*|--port[= ]|\s-p\s+)(\d{4,5})/g)) ports.add(+m[1])
+    }
+  }
+  for (const p of [5173, 3000, 8080, 4321]) ports.add(p)
+  for (const port of ports) {
+    try {
+      const res = await fetch(`http://localhost:${port}/`, { signal: AbortSignal.timeout(400) })
+      if (res.status < 500) return `http://localhost:${port}`
+    } catch {}
+  }
+  return null
+}
+
 async function readStdin() {
   if (process.stdin.isTTY) return {}
   let data = ''
@@ -326,6 +366,7 @@ async function hook(event) {
   }
 
   if (event === 'post-bash') {
+    if (/aura(\.mjs)?["']?\s+inspect\b/.test(input.tool_input?.command ?? '')) session.inspected = true
     const r = refresh(ctx)
     const { added, removed, moved } = r.changes
     if (added.length || removed.length || moved.length)
@@ -366,8 +407,14 @@ async function hook(event) {
       .filter((p) => fs.existsSync(p))
       .flatMap((p) => checkWithBaseline(ctx, st, p, { isNew: session.added.includes(ctx.rel(p)) }).filter((f) => f.severity === 'error' && !f.existing).map((f) => formatFindings(ctx.rel(p), [f])))
     const undescribed = session.added.map((p) => r.registry.components.find((c) => c.path === p)).filter((c) => c && !c.described)
-    if (errors.length) process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: unresolved component errors:\n${errors.join('\n')}` }))
-    else if (undescribed.length) process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: describe the new component(s) so other agents can find them: ${undescribed.map((c) => `aura describe ${c.name} --summary "…" --use "…" --keywords "vi, en"`).join(' ; ')} (run via node .aura/bin/aura.mjs).` }))
+    if (errors.length) return process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: unresolved component errors:\n${errors.join('\n')}` }))
+    if (undescribed.length) return process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: describe the new component(s) so other agents can find them: ${undescribed.map((c) => `aura describe ${c.name} --summary "…" --use "…" --keywords "vi, en"`).join(' ; ')} (run via node .aura/bin/aura.mjs).` }))
+    // One nudge per session: UI was edited, a dev server answers, and the rendered page was never inspected.
+    if (session.inspected || session.inspectNudged || ctx.config.inspect?.nudge === false) return
+    session.inspectNudged = true
+    saveSession()
+    const url = await devServer(ctx, session.touched)
+    if (url) process.stdout.write(JSON.stringify({ decision: 'block', reason: `Aura: you changed UI (${session.touched.slice(0, 3).join(', ')}${session.touched.length > 3 ? ', …' : ''}) but haven't looked at the rendered result. Run: node .aura/bin/aura.mjs inspect ${url}<route of each page you changed> and fix every [error] (warns where they apply). If those pages can't be opened (auth, no data), say so and finish.` }))
   }
 }
 
