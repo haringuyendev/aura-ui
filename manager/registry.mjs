@@ -25,7 +25,17 @@ export const loadProfile = (ctx) => loadJson(files(ctx).profile, null)
 
 export function refresh(ctx, { full = false } = {}) {
   const f = files(ctx)
-  const cache = full ? { files: {}, tokens: {} } : loadJson(f.cache, { files: {}, tokens: {} })
+  // scope "primitives" (default when the project has a primitives folder): the registry lists only the
+  // building blocks a new screen should be composed from; app components stay out of find/show, but every
+  // UI file is still checked and counted for usage. scope "all" registers every component.
+  const scope = ctx.config.scope === 'all' || !ctx.uiDir ? 'all' : 'primitives'
+  const cached = loadJson(f.cache, { files: {}, tokens: {} })
+  if (cached.scope !== scope) full = true
+  // Building blocks besides the primitives: a blocks/ folder next to them (the aura starter's data-table, form…)
+  // and any "includeDirs" from .aura/rules.json.
+  const buildingDirs = ctx.uiDir ? [ctx.uiDir, path.join(path.dirname(ctx.uiDir), 'blocks'), ...(ctx.config.includeDirs ?? []).map((d) => path.resolve(ctx.repo, d))] : []
+  const isBuildingBlock = (abs) => buildingDirs.some((d) => abs.startsWith(d + path.sep))
+  const cache = full ? { files: {}, tokens: {} } : cached
   const registry = loadRegistry(ctx)
   const prevByPath = new Map(registry.components.map((c) => [c.path, c]))
 
@@ -34,6 +44,7 @@ export function refresh(ctx, { full = false } = {}) {
   const nextFiles = {}
   const components = new Map()
   const changed = []
+  const newFiles = [] // source files that didn't exist at the last refresh (new app components too)
   for (const abs of sources) {
     const relPath = ctx.rel(abs)
     const st = fs.statSync(abs)
@@ -47,10 +58,11 @@ export function refresh(ctx, { full = false } = {}) {
     const entry = { mtime: st.mtimeMs, size: st.size, imports: localImports(ctx, abs, src).map(ctx.rel), component: false }
     const lib = ctx.uiLibPrefixes.length ? libraryImports(src, ctx.uiLibPrefixes) : []
     if (lib.length) entry.lib = lib.map((l) => `${l.from}#${l.name}`)
-    if (ctx.isComponentPath(abs)) {
+    if (ctx.isComponentPath(abs) && (scope === 'all' || isBuildingBlock(abs))) {
       const c = analyseComponent(ctx, abs, src)
       if (c) { entry.component = true; components.set(relPath, c); changed.push(relPath) }
     }
+    if (!prev && Object.keys(cache.files).length) newFiles.push(relPath)
     nextFiles[relPath] = entry
   }
 
@@ -124,9 +136,10 @@ export function refresh(ctx, { full = false } = {}) {
     writeJson(f.registry, { version: 1, updatedAt: now, components: list, library })
     writeJson(f.profile, buildProfile(ctx, tokens, list, now, library))
   }
-  writeJson(f.cache, { files: nextFiles, tokens })
+  writeJson(f.cache, { scope, files: nextFiles, tokens })
   const movedFrom = new Set(moved.map(([from]) => from)), movedTo = new Set(moved.map(([, to]) => to))
-  return { registry: { version: 1, components: list, library }, tokens, changes: { added: added.filter((a) => !movedTo.has(a)), removed: removed.filter((r) => !movedFrom.has(r)), updated, moved } }
+  const uiFiles = Object.keys(nextFiles).filter((p) => ctx.isComponentPath(path.join(ctx.repo, p)))
+  return { scope, uiFiles, registry: { version: 1, components: list, library }, tokens, changes: { added: added.filter((a) => !movedTo.has(a)), removed: removed.filter((r) => !movedFrom.has(r)), updated, moved, newFiles } }
 }
 
 function buildProfile(ctx, tokens, list, now, library = []) {
@@ -148,6 +161,7 @@ function buildProfile(ctx, tokens, list, now, library = []) {
       components: list.filter((c) => c.category === 'component').length,
       sections: list.filter((c) => c.category === 'section' && /\/(Component|index)\.(tsx|jsx)$/.test(c.path)).map((c) => c.name).sort(),
       sectionFiles: list.filter((c) => c.category === 'section').length,
+      scope: ctx.config.scope === 'all' || !ctx.uiDir ? 'all' : 'primitives',
       undescribed: list.filter((c) => !c.described).length,
       library: library.slice(0, 30).map((c) => `${c.name}(${c.import})`),
     },

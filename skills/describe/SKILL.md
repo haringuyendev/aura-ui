@@ -5,6 +5,9 @@ description: Write registry descriptions for the project's components - what eac
 
 # Aura describe
 
+Only registry entries need descriptions: with the default scope `"primitives"` that is the primitives and
+shared blocks, not components that belong to one app.
+
 ```bash
 node .aura/bin/aura.mjs describe <Name> \
   --summary "Nhãn giá căn hộ dạng 'từ 3,85 tỷ'." \

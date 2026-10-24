@@ -53,7 +53,9 @@ function summary(ctx, profile, registry) {
     `Stack: ${list(p.stack.framework)} · ${list(p.stack.styling)} · UI: ${list(p.stack.ui)} · icons: ${list(p.stack.icons)}${p.stack.cms ? ` · CMS: ${list(p.stack.cms)}` : ''}`,
     `Tokens: ${list([...p.tokens.files, ...(p.tokens.tailwindConfigs ?? [])])}${p.tokens.themeFiles?.length ? ` · theme in code: ${p.tokens.themeFiles.join(', ')} (style through the library's theme props/tokens, not classes)` : ''} · dark: ${p.tokens.darkSelector ?? 'none'} · ${p.tokens.colors.length} colors · fonts: ${Object.keys(p.tokens.fonts).join(', ') || '—'} · status: ${status} · chart: ${p.tokens.chartTokens}/5`,
     p.workspaces?.length ? `Monorepo: ${p.workspaces.length} packages (${p.workspaces.map((w) => w.dir).join(', ')}). Import a package's components by its public path (e.g. "${registry.components.find((c) => c.package && c.importInPackage)?.import ?? '@scope/ui/components/button'}"); inside that package use its local path (show prints both).` : '',
-    `Components (${registry.components.length}): ${p.components.uiDir ? `${p.components.primitives.length} primitives in ${p.components.uiDir}` : registry.library?.length ? 'primitives come from the UI library (below)' : 'no primitives folder (see aura doctor)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
+    p.components.scope === 'primitives'
+      ? `Building blocks (${registry.components.length}: ${p.components.primitives.length} primitives in ${p.components.uiDir}${registry.components.length > p.components.primitives.length ? ` + ${registry.components.length - p.components.primitives.length} blocks` : ''}): compose new screens from these. App-specific components are not indexed (scope "primitives"; "all" in .aura/rules.json indexes them). Most used: ${top}`
+      : `Components (${registry.components.length}): ${p.components.uiDir ? `${p.components.primitives.length} primitives in ${p.components.uiDir}` : registry.library?.length ? 'primitives come from the UI library (below)' : 'no primitives folder (see aura doctor)'}, ${p.components.components} shared, ${p.components.sectionFiles ?? p.components.sections.length} in sections/features. Most used: ${top}`,
     registry.library?.length ? `UI library components in use (the project's primitives too; import from the library): ${registry.library.slice(0, 16).map((c) => `${c.name}(${c.usedBy})`).join(', ')} — from ${[...new Set(registry.library.map((c) => c.import.split('/').slice(0, c.import.startsWith('@') ? 2 : 1).join('/')))].join(', ')}` : '',
     p.conventions.length ? `Conventions: ${p.conventions.join(' · ')}` : '',
     `Rules: reuse existing components (duplicates are blocked), only defined color tokens, no second UI library; after creating a component, describe it with "aura describe".`,
@@ -108,7 +110,7 @@ function checkWithBaseline(ctx, st, abs, opts) {
 }
 function writeBaseline(ctx, r) {
   const st = { ...state(ctx, r), baseline: {} }
-  const entries = r.registry.components.map((c) => ({ file: c.path, findings: checkFile(ctx, st, path.join(ctx.repo, c.path)) }))
+  const entries = r.uiFiles.map((p) => ({ file: p, findings: checkFile(ctx, st, path.join(ctx.repo, p)) }))
   const snap = snapshotBaseline(entries)
   fs.writeFileSync(files(ctx).baseline, JSON.stringify(snap, null, 2) + '\n')
   return Object.values(snap.files).reduce((n, rules) => n + Object.values(rules).reduce((a, b) => a + (typeof b === 'number' ? b : b.count), 0), 0)
@@ -165,7 +167,7 @@ async function main() {
     const notes = doctor(ctx, r)
     if (notes.length) console.log(`\nCheck these (fix in .aura/rules.json, then aura scan; aura doctor re-checks):\n${notes.map((n) => `- ${n}`).join('\n')}`)
     if (existing !== null) console.log(`Baseline: ${existing} existing finding(s) recorded; hooks will only block new ones (see: aura check).`)
-    console.log(`${r.registry.components.length} components registered, ${r.registry.components.filter((c) => !c.described).length} without a description yet.`)
+    console.log(`${r.registry.components.length} ${r.scope === 'primitives' ? 'primitives' : 'components'} registered${r.registry.library?.length ? ` + ${r.registry.library.length} UI library components` : ''}, ${r.registry.components.filter((c) => !c.described).length} without a description yet; ${r.uiFiles.length} UI files checked by the hooks.`)
     return
   }
 
@@ -214,10 +216,10 @@ async function main() {
     for (const [role, s] of Object.entries(t.status)) console.log(`Status ${role}: ${s.token ? `${s.token} (${s.contrastOnBackground}:1 on background${s.textSafe ? ', text-safe' : `, background/tint only${s.textToken ? `; for text use ${s.textToken}` : ''}`})` : 'missing'}`)
     console.log(`Chart tokens: ${t.chartTokens}/5${t.customUtilities.length ? ` · custom utilities: ${t.customUtilities.join(', ')}` : ''}`)
   } else if (cmd === 'check' || cmd === 'stats') {
-    const scope = has('changed') ? 'changed files (git status)' : positional.length ? positional.join(', ') : `all ${r.registry.components.length} registered components`
-    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx', '.vue', '.svelte']) : [p])) : r.registry.components.map((c) => path.join(ctx.repo, c.path))).filter((t) => ctx.isComponentPath(t))
+    const scope = has('changed') ? 'changed files (git status)' : positional.length ? positional.join(', ') : `all ${r.uiFiles.length} UI files`
+    const targets = (has('changed') ? changedFiles(ctx) : positional.length ? positional.map((p) => path.resolve(p)).flatMap((p) => (fs.statSync(p, { throwIfNoEntry: false })?.isDirectory() ? ctx.walk(p, ['.tsx', '.jsx', '.vue', '.svelte']) : [p])) : r.uiFiles.map((p) => path.join(ctx.repo, p))).filter((t) => ctx.isComponentPath(t))
     const st = state(ctx, r)
-    const all = targets.map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) }) }))
+    const all = targets.map((t) => ({ file: ctx.rel(t), findings: checkWithBaseline(ctx, st, t, { isNew: r.changes.added.includes(ctx.rel(t)) || r.changes.newFiles.includes(ctx.rel(t)) }) }))
     if (cmd === 'stats') {
       // Findings per rule, split into new and existing (baseline), plus the files with the most.
       const rows = {}
@@ -328,7 +330,7 @@ async function hook(event) {
     const { added, removed, moved } = r.changes
     if (added.length || removed.length || moved.length)
       emit('PostToolUse', `Aura registry updated: ${[added.length && `added ${added.join(', ')}`, removed.length && `removed ${removed.join(', ')}`, moved.length && `moved ${moved.map(([a, b]) => `${a} → ${b}`).join(', ')}`].filter(Boolean).join('; ')}.`)
-    for (const a of added) if (!session.added.includes(a)) session.added.push(a)
+    for (const a of [...added, ...r.changes.newFiles]) if (!session.added.includes(a)) session.added.push(a)
     return saveSession()
   }
 
@@ -338,7 +340,7 @@ async function hook(event) {
     if (!isComp && !isToken) return
     const r = refresh(ctx)
     const relPath = ctx.rel(target)
-    for (const a of r.changes.added) if (!session.added.includes(a)) session.added.push(a)
+    for (const a of [...r.changes.added, ...r.changes.newFiles]) if (!session.added.includes(a)) session.added.push(a)
     if (isComp && !session.touched.includes(relPath)) session.touched.push(relPath)
     saveSession()
     if (!isComp) return emit('PostToolUse', `Aura: design tokens re-read (${r.tokens.colors.length} colors).`)

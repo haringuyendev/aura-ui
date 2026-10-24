@@ -92,7 +92,11 @@ Cái gì không nhận ra được thì `aura doctor` liệt kê kèm cách sử
 Đã thử trên: turbo-web, starter aura, cal.com, dub, taxonomy, next-template, vercel/commerce, ant-design-pro,
 chakra-ui-docs, horizon-ui, mui/toolpad, nx-examples, một dự án Vue/shadcn-vue.
 
-Tuỳ chỉnh trong `.aura/rules.json`: `rules` (mức độ), `allowUiLibraries`, `primitivesDir`, `tokenFiles`,
+Registry mặc định chỉ chứa **viên gạch để build**: primitive, block dùng chung cạnh nó, component của thư viện UI.
+Component riêng của từng app không vào `find` và không cần mô tả, nhưng vẫn được hook kiểm tra (`"scope": "all"`
+để đưa cả vào).
+
+Tuỳ chỉnh trong `.aura/rules.json`: `scope`, `includeDirs`, `rules` (mức độ), `allowUiLibraries`, `primitivesDir`, `tokenFiles`,
 `cli: "local"` (hook chạy `.aura/bin` thay cho bản trong plugin).
 
 Hook (khai báo trong `hooks/hooks.json`, chỉ hoạt động ở repo có `.aura/`):

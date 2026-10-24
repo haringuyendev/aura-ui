@@ -40,6 +40,11 @@ Change it only when the user asks; explain the trade-off.
 - `rules`: each rule `error`, `warn`, `info` or `off` (e.g. a legacy area where raw elements are allowed).
 - `allowUiLibraries`: import prefixes allowed besides the detected UI libraries, e.g. `["@base-ui/react",
   "@tanstack/react-table"]`. Prefer this over turning `foreign-ui-library` off.
+- `scope`: `"primitives"` (default when a primitives folder exists) indexes only the building blocks new
+  screens are composed from: the primitives folder, a `blocks/` folder next to it, `includeDirs`, and UI
+  library components. App-specific components stay out of find/show and need no description, but every UI
+  file is still checked and counted. `"all"` indexes every component.
+- `includeDirs`: extra folders of shared building blocks to index, e.g. `["packages/ui/src/patterns"]`.
 - `primitivesDir`: the folder of base components when it isn't found automatically (e.g.
   `"packages/ui/src/components"`). Aura reads shadcn `components.json` aliases, tsconfig paths and
   package.json `#imports` first.

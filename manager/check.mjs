@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { UI_LIB_IMPORTS, read } from './context.mjs'
-import { packageImports } from './components.mjs'
+import { analyseComponent, packageImports } from './components.mjs'
 
 export const DEFAULT_RULES = {
   'undefined-token': 'error',
@@ -102,7 +102,8 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
   }
 
   // duplicate-component (new component files only)
-  const self = state.registry.components.find((c) => c.path === relPath)
+  // App components aren't in a primitives-only registry: analyse the file itself.
+  const self = state.registry.components.find((c) => c.path === relPath) ?? (isNew ? analyseComponent(ctx, abs, src) : null)
   if (isNew && self) {
     const others = state.registry.components.filter((c) => c.path !== relPath)
     const dupByName = others.find((c) => norm(c.name) && norm(c.name) === norm(self.name))
@@ -110,7 +111,7 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
     const dup = dupByName ?? dupByExport
     if (dup) add('duplicate-component', 1, `"${self.name}" duplicates the existing ${dup.category} "${dup.name}" (${dup.path}, used in ${dup.usedBy} files). Reuse it (import from "${importFrom(dup)}") or extend it with a variant instead of a second copy.`)
   }
-  if (self && !self.described && (isNew || state.rules['undescribed-component'] === 'warn'))
+  if (self && state.registry.components.some((c) => c.path === relPath) && !self.described && (isNew || state.rules['undescribed-component'] === 'warn'))
     add('undescribed-component', 1, `"${self.name}" has no description in the registry. Run: aura describe ${self.name} --summary "…" --use "…" --avoid "…" --keywords "vi, en"`)
   return out
 }
