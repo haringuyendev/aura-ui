@@ -11,6 +11,7 @@ import { killTree, run, which } from '../manager/proc.mjs'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const aura = path.join(root, 'manager', 'aura.mjs')
+// the temp folder as Windows gives it (8.3 short names like RUNNER~1): what users get from os.tmpdir() too
 const work = path.resolve(process.argv[2] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'aura-smoke-')))
 const app = path.join(work, 'app')
 let failed = 0

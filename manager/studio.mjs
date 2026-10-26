@@ -117,11 +117,11 @@ export async function studio(initialCtx, opts = {}) {
   /** New app from the aura starter (copy, install, aura init, git init), then point Studio at it. */
   async function createApp(name, onLog) {
     const target = opts.newDir ?? (isEmptyDir(opts.base) ? opts.base : path.join(opts.base, slug(name) || 'app-moi'))
-    await createFromStarter({ target, name: slug(name) || path.basename(target), onLog })
-    await attach(createContext(target))
+    const created = await createFromStarter({ target, name: slug(name) || path.basename(target), onLog })
+    await attach(createContext(created))
     state.fresh = true // the first message builds the app from the user's description
     save()
-    return target
+    return created
   }
 
   // ---- one chat turn: claude -p, translated into small events for the page ----

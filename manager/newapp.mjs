@@ -24,8 +24,11 @@ export async function createApp({ target, name = path.basename(target), onLog = 
   const template = templateDir()
   if (!fs.existsSync(path.join(template, 'package.json'))) throw new Error('Không thấy starter của aura-ui (template/). Chạy lệnh từ plugin aura-ui.')
   if (!isEmptyDir(target)) throw new Error(`Thư mục ${target} đã có file.`)
-  onLog(`Chép starter vào ${target}`)
   fs.mkdirSync(target, { recursive: true })
+  // the long form of the path: Windows temp folders come as 8.3 names (C:\Users\RUNNER~1), and Vite refuses (403)
+  // files whose real path doesn't start with the root it was given
+  target = fs.realpathSync.native(target)
+  onLog(`Chép starter vào ${target}`)
   fs.cpSync(template, target, { recursive: true, filter: (src) => !SKIP.test(path.relative(template, src)) })
   const pkgFile = path.join(target, 'package.json')
   const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'))
