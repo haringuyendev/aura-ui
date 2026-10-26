@@ -5,6 +5,9 @@ description: Check and fix what aura-ui needs on this machine - Node.js 20+, npm
 
 # Aura setup
 
+Runs on the user's machine only: the Claude Code CLI or the Code tab of Claude Desktop (local session). In the Desktop
+chat tab or on claude.ai the skill runs in a cloud sandbox: say so and point to those two places instead of checking.
+
 `${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder.
 
 ## 1. Find Node
@@ -24,8 +27,9 @@ Each line: `✓` ok, `✗` required and missing, `○` optional. A missing item 
 - **Always ask the user before installing anything or changing settings.** Say what the command does, in one line.
   Installers that need admin rights or a GUI (the Node .pkg on macOS, winget prompts): give the user the command or the
   link and let them run it.
-- **Node installed but not on the session's PATH** (`✗ Node có trong PATH của phiên Claude`): typical of Claude Desktop
-  started from the Dock with Node from nvm/volta/fnm. Aura's hooks run `node …`, so they fail there. With the user's
+- **Node installed but not on the session's PATH** (`✗ Node có trong PATH của phiên Claude`): can happen in Claude
+  Desktop with Node from nvm/volta/fnm when the login shell doesn't export it (Desktop reads the login shell's
+  environment, so a PATH set only in an interactive-shell file can be missing). Aura's hooks run `node …`, so they fail there. With the user's
   agreement, add the PATH line the report prints to the `env` block of `~/.claude/settings.json` (merge with what is
   there; it is a full literal PATH, `$PATH` isn't expanded), then restart the session. Alternative: install Node with the
   official installer or Homebrew, which put it in a folder GUI apps see.

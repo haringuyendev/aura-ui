@@ -62,8 +62,8 @@ Cài đặt từng thứ:
 ```
 Trong Claude Desktop, cài plugin ở tab **Code**, nút **+ → Add plugins**. Tab chat thường và claude.ai không chạy plugin.
 
-**Claude Desktop + nvm/volta/fnm:** mở Desktop từ Dock thì phiên làm việc có thể không thấy `node`, vì Desktop không đọc
-`.zshrc`. Khi đó hook của aura không chạy. `/aura-ui:setup` phát hiện được trường hợp này (`scripts/find-node.sh`, `scripts/find-node.ps1`)
+**Claude Desktop + nvm/volta/fnm:** Desktop lấy PATH từ login shell. Nếu nvm/volta/fnm chỉ được nạp trong file của
+shell tương tác thì phiên làm việc có thể không thấy `node`, và khi đó hook của aura không chạy. `/aura-ui:setup` phát hiện được trường hợp này (`scripts/find-node.sh`, `scripts/find-node.ps1`)
 và đề xuất thêm `env.PATH` vào `~/.claude/settings.json`.
 
 **Agent khác** (Codex, Cursor, Gemini CLI, OpenCode… loại đọc được thư mục skill có `SKILL.md`):
