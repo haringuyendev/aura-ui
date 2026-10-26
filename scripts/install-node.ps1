@@ -8,7 +8,9 @@ $ProgressPreference = 'SilentlyContinue' # Invoke-WebRequest is very slow with t
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
-$ver = (Invoke-RestMethod 'https://nodejs.org/dist/index.json' | Where-Object { $_.lts } | Select-Object -First 1).version
+# Windows PowerShell 5.1 emits the parsed JSON array as one pipeline item: store it first so piping enumerates releases
+$releases = Invoke-RestMethod 'https://nodejs.org/dist/index.json'
+$ver = @(($releases | Where-Object { $_.lts -and $_.lts -ne $false } | Select-Object -First 1).version)[0]
 if ($ver -notmatch '^v\d') { throw 'Could not read the Node.js release list from nodejs.org' }
 $name = "node-$ver-win-$arch"; $file = "$name.zip"
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("aura-node-" + [guid]::NewGuid())
