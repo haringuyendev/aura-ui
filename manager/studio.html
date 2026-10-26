@@ -59,7 +59,7 @@ svg { flex: none; }
 .step span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .step.sub { padding-left: 18px; }
 .step .st-ok { color: var(--ok); } .step .st-error { color: var(--danger); }
-.spin { width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+.spin { flex: none; width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .aura-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--warn); background: var(--warn-soft); padding: 7px 10px; border-radius: 8px; }
 .approve { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); box-shadow: var(--shadow); }
@@ -80,8 +80,26 @@ svg { flex: none; }
 
 .banner { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--warn-soft); color: var(--warn); font-size: 12.5px; border-bottom: 1px solid var(--line); }
 .banner[hidden] { display: none; }
+.banner.missing { flex-direction: column; align-items: stretch; gap: 6px; color: var(--danger); background: var(--danger-soft); }
+.create-card .banner.missing { border: 0; border-radius: 10px; padding: 10px 14px; }
+.banner.missing code { color: var(--fg); background: var(--panel); padding: 1px 6px; border-radius: 5px; user-select: all; }
 .banner code { font-family: var(--mono); }
 .banner .btn { flex: none; color: var(--fg); }
+.attachments { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 2px 6px; }
+.attachments:empty { display: none; }
+.att { position: relative; display: inline-flex; align-items: center; gap: 6px; max-width: 200px; height: 40px; padding: 0 8px 0 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); font-size: 12px; color: var(--muted); }
+.att img, .att .ficon { width: 32px; height: 32px; border-radius: 5px; object-fit: cover; flex: none; background: var(--soft); display: grid; place-items: center; font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+.att span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.att .x { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); color: var(--muted); display: grid; place-items: center; padding: 0; font-size: 11px; line-height: 1; }
+.att .x:hover { color: var(--fg); }
+.att.err { border-color: var(--danger); color: var(--danger); }
+.msg-files { align-self: flex-end; display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; max-width: 88%; margin-bottom: -12px; }
+.msg-files a { display: block; text-decoration: none; color: inherit; }
+.msg-files a.att { display: inline-flex; }
+.msg-files img { display: block; max-width: 180px; max-height: 120px; border-radius: 10px; border: 1px solid var(--line); object-fit: cover; }
+.msg-files .att { height: 36px; background: var(--user); border-color: transparent; }
+.chat.dropping::after, .create-form.dropping::after { content: 'Thả file vào đây'; position: absolute; inset: 8px; border: 2px dashed var(--accent); border-radius: 12px; background: color-mix(in oklab, var(--accent-soft) 85%, transparent); display: grid; place-items: center; font-weight: 600; color: var(--accent); pointer-events: none; z-index: 5; }
+.chat, .create-form { position: relative; }
 .composer { flex: none; padding: 12px 16px 16px; border-top: 1px solid var(--line); }
 .box { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 8px; transition: border-color .15s, box-shadow .15s; }
 .box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -119,6 +137,28 @@ iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff;
 .stage-empty code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 6px; border-radius: 5px; }
 .err { color: var(--danger); font-size: 13px; }
 
+/* ---- new app ---- */
+.create { min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; }
+.create[hidden], .app[hidden], .progress[hidden] { display: none; }
+.create-card { width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: 18px; }
+.create-card .brand { font-size: 15px; }
+.create-card h1 { margin: 0; font-size: 30px; line-height: 1.2; letter-spacing: -.025em; }
+.create-card .lead { margin: 0; color: var(--muted); }
+.create-form { border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: var(--shadow); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.create-form:focus-within { border-color: var(--accent); }
+.create-form label { font-size: 12.5px; color: var(--muted); font-weight: 550; }
+.create-form .field { width: 100%; }
+.create-form textarea { width: 100%; min-height: 110px; resize: vertical; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 10px; outline: 0; line-height: 1.5; }
+.create-form textarea:focus, .create-form .field:focus { border-color: var(--accent); }
+.create-foot { display: flex; align-items: center; gap: 10px; }
+.create-foot .where { padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.chip:hover { border-color: var(--accent); background: var(--accent-soft); }
+.progress { list-style: none; margin: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+.progress li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.progress li.now { color: var(--fg); display: flex; align-items: center; gap: 8px; }
+
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; overflow: visible; }
   .chat { height: 70vh; border-right: 0; border-bottom: 1px solid var(--line); }
@@ -128,7 +168,32 @@ iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff;
 </style>
 </head>
 <body>
-<div class="app">
+<div class="create" id="create" hidden>
+  <div class="create-card">
+    <div class="brand"><span class="brand-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/></svg></span>Aura Studio</div>
+    <h1>Mô tả app anh muốn dựng</h1>
+    <p class="lead">Studio tạo app từ starter của Aura (React, shadcn, các block có sẵn), bật dev server, rồi agent dựng màn hình đầu tiên theo mô tả. Sau đó anh chat để sửa tiếp.</p>
+    <div class="banner missing" id="cmissing" hidden></div>
+    <form class="create-form" id="createform">
+      <label for="cdesc">App này dùng để làm gì?</label>
+      <textarea id="cdesc" placeholder="Ví dụ: Dashboard theo dõi lịch khám của phòng khám: số ca hôm nay, ca trễ giờ, danh sách bệnh nhân chờ, lọc theo bác sĩ"></textarea>
+      <div class="chips" id="cideas"></div>
+      <div class="attachments" id="catts"></div>
+      <div><button class="btn btn-sm" id="cattach" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 11-8.6 8.6a5 5 0 0 1-7-7l8.5-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.3-2.4l7.9-7.9"/></svg>Đính kèm mockup, tài liệu yêu cầu…</button><input type="file" id="cfileinput" multiple hidden></div>
+      <label for="cname">Tên thư mục</label>
+      <input class="field" id="cname" spellcheck="false" placeholder="lich-kham">
+      <div class="create-foot">
+        <span class="where" id="cwhere"></span>
+        <span class="spacer"></span>
+        <button class="btn btn-primary" id="cgo" type="submit" disabled>Tạo app</button>
+      </div>
+    </form>
+    <ol class="progress" id="cprogress" hidden></ol>
+    <div class="err" id="cerr"></div>
+  </div>
+</div>
+
+<div class="app" id="main">
   <aside class="chat">
     <header class="chat-head">
       <div class="brand"><span class="brand-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/></svg></span>Aura Studio</div>
@@ -136,12 +201,16 @@ iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff;
       <span class="spacer"></span>
       <button class="icon-btn" id="reset" title="Cuộc trò chuyện mới" aria-label="Cuộc trò chuyện mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     </header>
+    <div class="banner missing" id="missing" hidden></div>
     <div class="banner" id="pwbanner" hidden><span>Chưa có Playwright nên <code>aura verify</code> chưa mở được trang để kiểm tra.</span><button class="btn btn-sm" id="pwinstall" type="button">Cài Playwright</button></div>
     <div class="messages" id="messages" aria-live="polite"></div>
     <form class="composer" id="composer">
       <div class="box">
+        <div class="attachments" id="atts"></div>
         <textarea id="input" rows="2" placeholder="Mô tả thay đổi anh muốn, ví dụ: thêm bộ lọc theo trạng thái cho bảng đơn hàng"></textarea>
         <div class="box-foot">
+          <button class="icon-btn" id="attach" type="button" title="Đính kèm file (ảnh, PDF, CSV…) — hoặc kéo thả, dán ảnh" aria-label="Đính kèm file"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21 11-8.6 8.6a5 5 0 0 1-7-7l8.5-8.6a3.3 3.3 0 0 1 4.7 4.7l-8.6 8.6a1.7 1.7 0 0 1-2.3-2.4l7.9-7.9"/></svg></button>
+          <input type="file" id="fileinput" multiple hidden>
           <span class="where" id="where"></span>
           <span class="spacer"></span>
           <button class="btn btn-primary btn-sm" id="send" type="submit" disabled>Gửi
@@ -258,29 +327,79 @@ function renderMessages() {
     return
   }
   S.messages.forEach((m, i) => {
-    if (m.role === 'user') box.insertAdjacentHTML('beforeend', `<div class="msg-user">${esc(m.text)}</div>`)
+    if (m.role === 'user') {
+      if (m.files?.length) box.insertAdjacentHTML('beforeend', `<div class="msg-files">${m.files.map((f) => /^image\//.test(f.type)
+        ? `<a href="/api/file?id=${encodeURIComponent(f.id)}" target="_blank" rel="noopener"><img src="/api/file?id=${encodeURIComponent(f.id)}" alt="${esc(f.name)}"></a>`
+        : `<a href="/api/file?id=${encodeURIComponent(f.id)}" target="_blank" rel="noopener" class="att">${fileIcon(f.name)}<span>${esc(f.name)}</span></a>`).join('')}</div>`)
+      box.insertAdjacentHTML('beforeend', `<div class="msg-user">${esc(m.text)}</div>`)
+    }
     else box.appendChild(renderReply(m, S.running && i === S.messages.length - 1))
   })
   if (atBottom || S.running) box.scrollTop = box.scrollHeight
 }
 
+/* ---- attachments ---- */
+const fileIcon = (name) => `<i class="ficon">${esc((name.split('.').pop() || 'file').slice(0, 4))}</i>`
+/** Upload queue for one composer: chips in `box`, files from a picker, drops on `zone` and pasted images. */
+function attacher(box, input, zone, onChange) {
+  let items = [] // { key, name, type, id?, error?, url? }
+  const render = () => {
+    box.innerHTML = items.map((f, i) => `<span class="att${f.error ? ' err' : ''}" title="${esc(f.error ?? f.name)}">${f.url ? `<img src="${f.url}" alt="">` : fileIcon(f.name)}${f.id || f.error ? '' : '<i class="spin"></i>'}<span>${esc(f.error ?? f.name)}</span><button type="button" class="x" data-i="${i}" aria-label="Bỏ ${esc(f.name)}">×</button></span>`).join('')
+    box.querySelectorAll('.x').forEach((b) => b.onclick = () => { const [f] = items.splice(+b.dataset.i, 1); if (f?.url) URL.revokeObjectURL(f.url); render(); onChange() })
+  }
+  const add = async (fileList) => {
+    for (const file of fileList) {
+      if (items.length >= 10) break
+      const f = { key: Math.random(), name: file.name || `anh-dan-${Date.now()}.png`, type: file.type, url: /^image\//.test(file.type) ? URL.createObjectURL(file) : null }
+      if (file.size > 20e6) f.error = `${f.name}: lớn hơn 20MB`
+      items.push(f); render(); onChange()
+      if (f.error) continue
+      try {
+        const r = await fetch(`/api/upload?name=${encodeURIComponent(f.name)}`, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: file })
+        const j = await r.json()
+        if (!r.ok) throw new Error(j.error ?? `Lỗi ${r.status}`)
+        Object.assign(f, { id: j.id, type: j.type, size: j.size })
+      } catch (e) { f.error = `${f.name}: ${e.message}` }
+      render(); onChange()
+    }
+  }
+  input.addEventListener('change', () => { add([...input.files]); input.value = '' })
+  let depth = 0
+  zone.addEventListener('dragenter', (e) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); depth++; zone.classList.add('dropping') } })
+  zone.addEventListener('dragover', (e) => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault() })
+  zone.addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; zone.classList.remove('dropping') } })
+  zone.addEventListener('drop', (e) => { if (!e.dataTransfer?.files.length) return; e.preventDefault(); depth = 0; zone.classList.remove('dropping'); add([...e.dataTransfer.files]) })
+  zone.addEventListener('paste', (e) => { const files = [...(e.clipboardData?.files ?? [])]; if (files.length) { e.preventDefault(); add(files) } })
+  return {
+    ready: () => items.filter((f) => f.id),
+    busy: () => items.some((f) => !f.id && !f.error),
+    /** Uploaded files for a message; clears the chips. */
+    take() { const out = items.filter((f) => f.id).map(({ id, name, type, size }) => ({ id, name, type, size })); items.forEach((f) => f.url && URL.revokeObjectURL(f.url)); items = []; render(); return out },
+  }
+}
+const chatFiles = attacher($('atts'), $('fileinput'), document.querySelector('.chat'), () => syncSend())
+$('attach').addEventListener('click', () => $('fileinput').click())
+const createFiles = attacher($('catts'), $('cfileinput'), $('createform'), () => {})
+$('cattach').addEventListener('click', () => $('cfileinput').click())
+
 /* ---- sending ---- */
 function syncSend() {
   const b = $('send')
   if (S.running) { b.disabled = false; b.className = 'btn btn-stop btn-sm'; b.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Dừng' }
-  else { b.className = 'btn btn-primary btn-sm'; b.disabled = !$('input').value.trim(); b.innerHTML = 'Gửi <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' }
+  else { b.className = 'btn btn-primary btn-sm'; b.disabled = (!$('input').value.trim() && !chatFiles.ready().length) || chatFiles.busy(); b.innerHTML = 'Gửi <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' }
   $('reset').disabled = S.running
 }
 
-async function send(text) {
-  if (!text.trim() || S.running) return
+async function send(text, files = chatFiles.take()) {
+  if ((!text.trim() && !files.length) || S.running) return
+  if (!text.trim()) text = 'Xem file đính kèm.'
   S.running = true
   const reply = { role: 'assistant', parts: [] }
-  S.messages.push({ role: 'user', text }, reply)
+  S.messages.push({ role: 'user', text, files }, reply)
   $('input').value = ''; autosize(); syncSend(); renderMessages()
   const width = S.width || Math.round($('stage').clientWidth)
   try {
-    const res = await api('/api/chat', { text, app: S.app, path: S.path, width })
+    const res = await api('/api/chat', { text, app: S.app, path: S.path, width, files: files.map((f) => ({ id: f.id, name: f.name })) })
     if (!res.ok) throw new Error(res.status === 409 ? 'Agent đang chạy một yêu cầu khác.' : `Lỗi ${res.status}`)
     const reader = res.body.getReader(), dec = new TextDecoder()
     let buf = ''
@@ -390,8 +509,78 @@ function renderRoutes() {
   $('routes').innerHTML = S.routes.filter((r) => r.app === S.app || S.apps.length < 2).map((r) => `<option value="${esc(r.path)}">`).join('')
 }
 
+/* ---- new app ---- */
+const CIDEAS = ['Dashboard doanh thu và đơn hàng cho chuỗi cửa hàng', 'Quản lý lịch khám và bệnh nhân chờ cho phòng khám', 'Trang quản trị nhân sự: danh sách, chấm công, nghỉ phép', 'Theo dõi tồn kho và cảnh báo hàng sắp hết']
+const slugify = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').split('-').slice(0, 4).join('-')
+let nameTouched = false
+function showCreate(st) {
+  $('main').hidden = true; $('create').hidden = false
+  document.title = 'App mới · Aura Studio'
+  const where = () => { $('cwhere').textContent = st.empty ? `Tạo trong ${st.base}` : `Tạo trong ${st.base}/${$('cname').value.trim() || '…'}` }
+  if (st.empty) { $('cname').value = st.name; $('cname').disabled = true; nameTouched = true }
+  $('cideas').innerHTML = CIDEAS.map((i) => `<button class="chip" type="button">${esc(i)}</button>`).join('')
+  $('cideas').querySelectorAll('.chip').forEach((b) => b.onclick = () => { $('cdesc').value = b.textContent; sync(); $('cdesc').focus() })
+  const sync = () => {
+    if (!nameTouched) $('cname').value = slugify($('cdesc').value)
+    $('cgo').disabled = !$('cdesc').value.trim() || !$('cname').value.trim()
+    where()
+  }
+  $('cdesc').oninput = sync
+  $('cname').oninput = () => { nameTouched = true; sync() }
+  $('cdesc').onkeydown = (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('createform').requestSubmit() }
+  $('createform').onsubmit = (e) => { e.preventDefault(); createApp() }
+  where(); $('cdesc').focus()
+}
+async function createApp() {
+  const desc = $('cdesc').value.trim(), name = $('cname').value.trim()
+  if (createFiles.busy()) { $('cerr').textContent = 'Đợi file tải lên xong đã.'; return }
+  $('cgo').disabled = true; $('cgo').innerHTML = '<i class="spin"></i> Đang tạo…'
+  $('cdesc').disabled = $('cname').disabled = true
+  $('cerr').textContent = ''
+  const list = $('cprogress'); list.hidden = false; list.innerHTML = ''
+  const log = (text) => {
+    list.querySelector('.now')?.classList.remove('now')
+    list.querySelector('.spin')?.remove()
+    list.insertAdjacentHTML('beforeend', `<li class="now"><i class="spin"></i>${esc(text)}</li>`)
+    list.scrollTop = list.scrollHeight
+  }
+  let ready = false
+  try {
+    const res = await api('/api/create', { name })
+    const reader = res.body.getReader(), dec = new TextDecoder()
+    let buf = ''
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      let i
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2)
+        if (!chunk.startsWith('data: ')) continue
+        const e = JSON.parse(chunk.slice(6))
+        if (e.t === 'log') log(e.text)
+        else if (e.t === 'error') throw new Error(e.text)
+        else if (e.t === 'ready') ready = true
+      }
+    }
+  } catch (e) { $('cerr').textContent = e.message }
+  if (!ready) { $('cgo').disabled = false; $('cgo').textContent = 'Thử lại'; $('cdesc').disabled = false; return }
+  $('create').hidden = true; $('main').hidden = false
+  await load()
+  send(desc, createFiles.take())
+}
+
+/* Programs missing on this machine (claude CLI, npm): what for and the install command. */
+function showMissing(el, items) {
+  el.hidden = !items?.length
+  if (!items?.length) return
+  el.innerHTML = items.map((m) => `<div>Thiếu <b>${esc(m.label)}</b> ${esc(m.why)}. Cài: <code>${esc(m.fix)}</code></div>`).join('') + '<div>Cài xong thì tắt Studio (Ctrl+C) và mở lại.</div>'
+}
+
 async function load() {
   const st = await (await api('/api/state')).json()
+  showMissing($('missing'), st.missing); showMissing($('cmissing'), st.missing)
+  if (st.mode === 'new') return showCreate(st)
   Object.assign(S, st)
   $('project').textContent = st.project
   document.title = `${st.project} · Aura Studio`

@@ -1,0 +1,23 @@
+name: smoke
+# aura-ui end to end on each OS: new app from the starter, check, scaffold, hooks, verify, Studio API (scripts/smoke.mjs).
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Smoke test
+        run: node scripts/smoke.mjs

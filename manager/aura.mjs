@@ -16,9 +16,13 @@
 //                                   that render them (found through imports and the router); the Stop hook requires it
 //   aura inspect <url> [/path…] [--widths 1440,768,390] [--shot] [--json]   open the pages headless and report
 //                                   layout, KPI emphasis, data color, repeated content and button problems as text
-//   aura studio [--app apps/web] [--port 4400] [--model m] [--no-open]
+//   aura studio [--app apps/web] [--port 4400] [--model m] [--no-open] [--new <dir>]
 //                                   a local Lovable-style page: chat with Claude Code on the left, the live dev server on
-//                                   the right (runs claude -p in this repo, so aura's skills and hooks apply)
+//                                   the right (runs claude -p in this repo, so aura's skills and hooks apply). In a folder
+//                                   without a project (or with --new) it opens on "new app": describe it, Studio creates it
+//                                   from the starter and the first message builds it
+//   aura new <folder> [--name x]    a new app from the aura starter (copy, install, aura init, git init)
+//   aura setup [--json]             what this machine has for aura-ui (Node, npm, git, claude CLI, Playwright) and how to install the rest
 //   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
 //   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
@@ -40,6 +44,9 @@ import { SHADCN, addCommand, addsPrimitives, hasComponent, installNames } from '
 import { loadVerify, verifiedClean, verify } from './verify.mjs'
 import { SCAFFOLDS, addVariant, scaffold, snippet } from './scaffold.mjs'
 import { studio } from './studio.mjs'
+import { createApp } from './newapp.mjs'
+import { runSync } from './proc.mjs'
+import { checkSetup, formatSetup } from './setup.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
@@ -195,7 +202,9 @@ function syncVendoredCli(ctx) {
   if (!VERSION || ctx.config.cli === 'local' || !fs.existsSync(path.join(here, '..', '.claude-plugin'))) return null
   let current = null
   try { current = fs.readFileSync(path.join(bin, 'VERSION'), 'utf8').trim() } catch {}
-  if (current === VERSION) return null
+  // only upgrade: an older plugin (a teammate who hasn't updated) must not downgrade a newer committed copy
+  const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false }
+  if (current && !newer(VERSION, current)) return null
   vendorCli(ctx)
   return current ?? 'older'
 }
@@ -250,6 +259,19 @@ async function main() {
     return
   }
 
+  if (cmd === 'new') {
+    if (!positional[0]) return console.error('usage: aura new <folder> [--name app-name]')
+    try { await createApp({ target: path.resolve(positional[0]), name: flag('name') ?? path.basename(path.resolve(positional[0])) }) } catch (e) { console.error(`aura new: ${e.message}`); process.exit(1) }
+    return console.log(`Ready: cd ${positional[0]} && npm run dev   (or: node .aura/bin/aura.mjs studio)`)
+  }
+  if (cmd === 'setup') {
+    const items = checkSetup(isInitialised(ctx) ? ctx : null)
+    if (has('json')) console.log(JSON.stringify(items, null, 2))
+    else console.log(formatSetup(items))
+    if (items.some((i) => !i.ok && !i.optional)) process.exitCode = 1
+    return
+  }
+
   if (cmd === 'inspect') {
     const opts = { shot: has('shot') }
     if (flag('widths')) opts.widths = flag('widths').split(',').map(Number).filter(Boolean)
@@ -263,6 +285,15 @@ async function main() {
     else console.log(out.map((o) => o.text).join('\n\n'))
     if (out.some((o) => o.errors)) process.exitCode = 1
     return
+  }
+
+  if (cmd === 'studio') {
+    // A managed repo opens on its chat + preview; an empty folder (or --new <name>) opens on the "new app" screen.
+    const o = { port: flag('port'), app: flag('app'), model: flag('model'), permissionMode: flag('permission-mode'), open: !has('no-open'), base: process.cwd() }
+    if (flag('new')) return studio(null, { ...o, newDir: path.resolve(flag('new')) })
+    if (isInitialised(ctx)) { syncVendoredCli(ctx); return studio(ctx, o) }
+    if (fs.existsSync(path.join(process.cwd(), 'package.json'))) { console.error(`No .aura/ in ${ctx.repo}. Run aura init first (aura-ui:init), then aura studio.`); process.exit(2) }
+    return studio(null, o)
   }
 
   requireInit(ctx)
@@ -318,7 +349,7 @@ async function main() {
     if (unknown.length) console.log(`Note: ${unknown.join(', ')} ${unknown.length > 1 ? 'are' : 'is'} not a known shadcn item; trying anyway.`)
     if (has('dry-run')) return console.log(command.text)
     console.log(`$ ${command.text}`)
-    const res = spawnSync(command.argv[0], command.argv.slice(1), { cwd: command.dir, stdio: 'inherit' })
+    const res = runSync(command.argv[0], command.argv.slice(1), { cwd: command.dir, stdio: 'inherit' })
     if (res.status !== 0) return console.error(`aura add: the shadcn command failed (exit ${res.status ?? res.error?.message}).`), process.exit(1)
     const after = refresh(ctx)
     const added = after.changes.added
@@ -422,10 +453,6 @@ async function main() {
     })
     console.log(res.text)
     if (!res.ok) process.exitCode = 1
-  } else if (cmd === 'studio') {
-    await studio(ctx, { refresh: () => (refresh(ctx), { index: JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files }) }, {
-      port: flag('port'), app: flag('app'), model: flag('model'), permissionMode: flag('permission-mode'), open: !has('no-open'),
-    })
   } else if (cmd === 'baseline') {
     console.log(`Baseline updated: ${writeBaseline(ctx, r)} finding(s) accepted as existing.`)
   } else if (cmd === 'describe' && flag('from')) {

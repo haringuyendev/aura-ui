@@ -11,7 +11,15 @@ node .aura/bin/aura.mjs studio --app apps/web  # monorepo: which app the preview
 node .aura/bin/aura.mjs studio --port 4500 --model sonnet --no-open
 ```
 Start it in the background (it is a server: it keeps running until Ctrl+C) and give the user the URL.
-The repo needs `.aura/` (run the `aura-ui:init` skill first) and the `claude` CLI on PATH, logged in.
+It needs the `claude` CLI on PATH, logged in. An existing project needs `.aura/` first (the `aura-ui:init` skill).
+
+A brand-new app: run it from the plugin in an empty folder, or name the folder to create:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" studio                   # in an empty folder
+node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" studio --new lich-kham    # creates ./lich-kham
+```
+The page opens on "describe your app": it creates the app from the aura starter (copy, install, aura init, git init),
+starts the dev server and sends the description as the first message, which builds the first screens.
 
 What it does:
 - Each chat message runs `claude -p` in the repo (`--permission-mode auto` by default; `"studio": { "permissionMode", "model", "port" }`
@@ -23,4 +31,10 @@ What it does:
   it, Studio shows Approve/Decline, and an approval is recorded in `.aura/cache/studio-approved.json` so the agent can retry.
 - No Playwright in the project: Studio tells the agent to verify with `--skip-inspect` and shows the user an install button.
 
-Debugging: `.aura/cache/studio.json` holds the transcript, `.aura/cache/studio-last.jsonl` the last turn's raw stream.
+Attachments: the user can attach files (picker, drag and drop on the chat, pasted screenshots), also on the new-app
+screen. They are saved in `.aura/cache/studio-uploads/` (git-ignored) and the message lists their paths with how to use
+them: images as mockups or bug screenshots (rebuild with the project's components and tokens), CSV/JSON as sample data,
+PDF/text as requirements, Excel/Word through the xlsx/docx skills. 20MB per file, 10 per message.
+
+Debugging: `.aura/cache/studio.json` holds the transcript (a new conversation archives the old one in
+`.aura/cache/studio-history/`), `.aura/cache/studio-last.jsonl` the last turn's raw stream.

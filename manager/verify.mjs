@@ -31,10 +31,17 @@ export async function devServer(ctx, app = '.') {
   for (const f of fs.existsSync(dir) ? fs.readdirSync(dir).filter((x) => /^(vite|next|nuxt|astro|svelte|rsbuild|webpack)\.config\.|^package\.json$/.test(x)) : [])
     for (const m of read(path.join(dir, f)).matchAll(/(?:\bport\s*:\s*|--port[= ]|\s-p\s+|PORT=)(\d{4,5})/g)) declared.add(+m[1])
   const ports = declared.size ? [...declared] : [5173, 3000, 8080, 4321]
+  // Another project may hold the default port: a Vite server answers 403 for /@fs/ paths outside its root.
+  let real = dir
+  try { real = fs.realpathSync(dir) } catch {}
+  const fsPath = '/' + real.replace(/\\/g, '/').replace(/^\/+/, '') // /@fs/Users/… or /@fs/C:/Users/…
+  const serves = async (base) => {
+    try { return (await fetch(`${base}/@fs${fsPath}/package.json`, { signal: AbortSignal.timeout(800) })).status !== 403 } catch { return true }
+  }
   for (const port of ports) {
     try {
       const res = await fetch(`http://localhost:${port}/`, { signal: AbortSignal.timeout(500) })
-      if (res.status < 500) return { url: `http://localhost:${port}`, tried: ports }
+      if (res.status < 500 && await serves(`http://localhost:${port}`)) return { url: `http://localhost:${port}`, tried: ports }
     } catch {}
   }
   return { url: null, tried: ports }

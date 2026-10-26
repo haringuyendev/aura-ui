@@ -4,10 +4,15 @@
 // State (session id, transcript, chosen app/page) lives in .aura/cache/studio.json.
 import fs from 'node:fs'
 import http from 'node:http'
+import os from 'node:os'
 import path from 'node:path'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { createContext } from './context.mjs'
+import { createApp as createFromStarter, isEmptyDir } from './newapp.mjs'
+import { killTree, run as runProgram, which } from './proc.mjs'
 import { loadPlaywright } from './inspect.mjs'
+import { files, refresh } from './registry.mjs'
 import { packageManager } from './primitives.mjs'
 import { allRoutes } from './routes.mjs'
 import { devServer } from './verify.mjs'
@@ -16,6 +21,7 @@ const here = path.dirname(fileURLToPath(import.meta.url))
 const readJson = (p, fallback) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')) } catch { return fallback } }
 
 const SYSTEM = `You are running inside Aura Studio: a chat page next to a live preview of this project's dev server. The user reads your replies in the chat, not a terminal.
+- Everything you write is shown to the user, including short notes between tool calls: write all of it in Vietnamese, or say nothing between tool calls.
 - Reply in Vietnamese, short: what you changed and where it shows (1-4 lines). No long reports, no code dumps unless asked.
 - Build UI with the aura-ui:build skill: compose screens from the project's components (aura find / scaffold / snippet / variant), semantic tokens only.
 - Before you finish a UI change, run node .aura/bin/aura.mjs verify and fix what it reports.
@@ -55,29 +61,73 @@ function openBrowser(url) {
   try { spawn(cmd, args, { stdio: 'ignore', detached: true }).unref() } catch {}
 }
 
-/**
- * opts: { port, app, open, model, permissionMode }
- * deps: { refresh() → { index } } (the CLI's incremental scan, for the route list)
- */
-export async function studio(ctx, deps, opts = {}) {
-  const stateFile = path.join(ctx.auraDir, 'cache', 'studio.json')
-  const approvedFile = path.join(ctx.auraDir, 'cache', 'studio-approved.json')
-  fs.mkdirSync(path.dirname(stateFile), { recursive: true })
-  const state = { sessionId: null, messages: [], app: null, path: '/', ...readJson(stateFile, {}) }
-  const save = () => fs.writeFileSync(stateFile, JSON.stringify(state, null, 1))
-  const appList = apps(ctx)
-  if (opts.app) state.app = opts.app
-  if (!appList.some((a) => a.dir === state.app)) state.app = appList.find((a) => a.dir !== '.')?.dir ?? appList[0]?.dir ?? '.'
-  const permissionMode = opts.permissionMode ?? ctx.config.studio?.permissionMode ?? 'auto'
-  const model = opts.model ?? ctx.config.studio?.model
+const MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', pdf: 'application/pdf', txt: 'text/plain', md: 'text/markdown', csv: 'text/csv', json: 'application/json', html: 'text/html' }
+const mimeOf = (name) => MIME[path.extname(name).slice(1).toLowerCase()] ?? 'application/octet-stream'
+/** How the agent should use an attachment, by type. */
+function attachmentHint(name) {
+  const ext = path.extname(name).slice(1).toLowerCase()
+  if (/^(png|jpe?g|gif|webp|svg)$/.test(ext)) return "image: a design mockup or a screenshot (of a bug, of a reference). Rebuild what it shows with the project's components and tokens; don't copy colors that aren't tokens"
+  if (/^(csv|json|tsv)$/.test(ext)) return 'data: use it as the sample data'
+  if (/^(xlsx|xls)$/.test(ext)) return 'Excel file: read it with the xlsx skill (or a short script); use it as data or requirements'
+  if (/^(docx|doc)$/.test(ext)) return 'Word file: read it with the docx skill; treat it as requirements'
+  if (/^(pptx)$/.test(ext)) return 'slides: read them with the pptx skill; treat them as requirements'
+  return 'document: treat it as requirements or reference'
+}
 
-  let playwright = !!(await loadPlaywright(ctx).catch(() => null))
+const slug = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
+
+/**
+ * ctx: the aura-managed repo, or null to start on the "new app" screen (create in opts.newDir, or in opts.base/<name>).
+ * opts: { port, app, open, model, permissionMode, newDir, base }
+ */
+export async function studio(initialCtx, opts = {}) {
+  let ctx, stateFile, approvedFile, state, appList, playwright, permissionMode, model
   let run = null // { child, aborted }
-  const devs = {} // app dir → { child, log }
+  let creating = null // { log } while a new app is being created
+  const devs = {} // app dir → { child, log, url }
+  /** The app's dev server: the one Studio started (its printed URL: another project may hold the default port), else found. */
+  const devUrl = async (app) => devs[app]?.url ?? (await devServer(ctx, app)).url
+  const save = () => fs.writeFileSync(stateFile, JSON.stringify(state, null, 1))
+  // Attachments live in .aura/cache/studio-uploads (git-ignored); before a new app exists, in a temp folder, moved in on use.
+  const staging = path.join(os.tmpdir(), `aura-studio-${process.pid}`)
+  const uploadsDir = () => ctx ? path.join(ctx.auraDir, 'cache', 'studio-uploads') : staging
+  const findUpload = (id) => {
+    if (!/^[\w.-]+$/.test(id ?? '')) return null
+    for (const dir of [ctx && uploadsDir(), staging].filter(Boolean)) if (fs.existsSync(path.join(dir, id))) return path.join(dir, id)
+    return null
+  }
+
+  /** Point Studio at a repo (at start, or once a new app exists). */
+  async function attach(c) {
+    ctx = c
+    stateFile = path.join(ctx.auraDir, 'cache', 'studio.json')
+    approvedFile = path.join(ctx.auraDir, 'cache', 'studio-approved.json')
+    fs.mkdirSync(path.dirname(stateFile), { recursive: true })
+    state = { sessionId: null, messages: [], app: null, path: '/', ...readJson(stateFile, {}) }
+    appList = apps(ctx)
+    if (opts.app) state.app = opts.app
+    if (!appList.some((a) => a.dir === state.app)) state.app = appList.find((a) => a.dir !== '.')?.dir ?? appList[0]?.dir ?? '.'
+    permissionMode = opts.permissionMode ?? ctx.config.studio?.permissionMode ?? 'auto'
+    model = opts.model ?? ctx.config.studio?.model
+    playwright = !!(await loadPlaywright(ctx).catch(() => null))
+  }
+  if (initialCtx) await attach(initialCtx)
+  const routeIndex = () => { refresh(ctx); return JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files }
+
+  /** New app from the aura starter (copy, install, aura init, git init), then point Studio at it. */
+  async function createApp(name, onLog) {
+    const target = opts.newDir ?? (isEmptyDir(opts.base) ? opts.base : path.join(opts.base, slug(name) || 'app-moi'))
+    await createFromStarter({ target, name: slug(name) || path.basename(target), onLog })
+    await attach(createContext(target))
+    state.fresh = true // the first message builds the app from the user's description
+    save()
+    return target
+  }
 
   // ---- one chat turn: claude -p, translated into small events for the page ----
-  function chat(text, ctxLine, send) {
-    const user = { role: 'user', text, at: Date.now() }
+  function chat(text, ctxLine, send, attached = []) {
+    const user = { role: 'user', text, at: Date.now(), ...(attached.length ? { files: attached.map(({ id, name, type, size }) => ({ id, name, type, size })) } : {}) }
+    if (attached.length) ctxLine += `\nThe user attached ${attached.length === 1 ? 'a file' : 'files'} (open with the Read tool):\n${attached.map((f) => `- ${f.rel} (${f.name}) — ${attachmentHint(f.name)}`).join('\n')}`
     const reply = { role: 'assistant', parts: [], at: Date.now() }
     state.messages.push(user, reply)
     save()
@@ -85,7 +135,7 @@ export async function studio(ctx, deps, opts = {}) {
       '--permission-mode', permissionMode, '--append-system-prompt', SYSTEM, '--allowedTools', 'Bash(node .aura/bin/aura.mjs:*)']
     if (state.sessionId) args.push('--resume', state.sessionId)
     if (model) args.push('--model', model)
-    const child = spawn('claude', args, { cwd: ctx.repo, env: { ...process.env, AURA_STUDIO: '1' }, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = runProgram('claude', args, { cwd: ctx.repo, env: { AURA_STUDIO: '1' }, stdio: ['ignore', 'pipe', 'pipe'] })
     run = { child, aborted: false }
     const emit = (e) => { send(e); return e }
     const lastText = () => reply.parts.at(-1)?.kind === 'text' ? reply.parts.at(-1) : null
@@ -132,7 +182,7 @@ export async function studio(ctx, deps, opts = {}) {
       } else if (o.type === 'user') {
         // a blocking hook's reason comes back to the model as a user turn (Stop asking for verify, a rule violation)
         const said = typeof o.message?.content === 'string' ? o.message.content : (o.message?.content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('\n')
-        const aura = said.match(/Aura[^\n]*/)?.[0]
+        const aura = said.match(/Aura (?:\(\d+\/\d+\)|blocked)[^\n]*/)?.[0]
         if (aura && !o.parent_tool_use_id) { const label = aura.slice(0, 200); reply.parts.push({ kind: 'aura', text: label }); emit({ t: 'aura', text: label }) }
         for (const b of Array.isArray(o.message?.content) ? o.message.content : []) if (b.type === 'tool_result' && tools.has(b.tool_use_id)) {
           const tool = tools.get(b.tool_use_id)
@@ -159,7 +209,7 @@ export async function studio(ctx, deps, opts = {}) {
         emit({ t: 'done', message: reply })
         resolve()
       }
-      child.on('error', (e) => finish(1, e.code === 'ENOENT' ? 'không tìm thấy lệnh claude trong PATH' : e.message))
+      child.on('error', (e) => finish(1, e.code === 'ENOENT' ? 'không tìm thấy Claude Code CLI. Cài bằng native installer (xem aura setup), rồi mở lại Studio' : e.message))
       child.on('close', (code) => finish(code))
     })
   }
@@ -167,11 +217,13 @@ export async function studio(ctx, deps, opts = {}) {
   async function startDev(app) {
     const a = appList.find((x) => x.dir === app)
     if (!a) return { url: null, error: 'Không có app này' }
+    if (devs[app]?.url) return { url: devs[app].url }
     const found = await devServer(ctx, app)
-    if (found.url) return { url: found.url }
+    if (found.url && !opts.newDir && !state.fresh) return { url: found.url }
     if (!devs[app]) {
       const [bin, ...rest] = a.dev.split(' ')
-      const child = spawn(bin, rest, { cwd: path.join(ctx.repo, app), env: { ...process.env, BROWSER: 'none' }, stdio: ['ignore', 'pipe', 'pipe'] })
+      const child = runProgram(bin, rest, { cwd: path.join(ctx.repo, app), env: { BROWSER: 'none' }, stdio: ['ignore', 'pipe', 'pipe'] })
+      child.on('error', (e) => { if (devs[app]) devs[app].log += `\n${e.code === 'ENOENT' ? `không tìm thấy lệnh ${bin}` : e.message}` })
       devs[app] = { child, log: '' }
       const keep = (d) => { devs[app].log = (devs[app].log + d).slice(-4000) }
       child.stdout.on('data', keep); child.stderr.on('data', keep)
@@ -181,17 +233,26 @@ export async function studio(ctx, deps, opts = {}) {
       await new Promise((r) => setTimeout(r, 500))
       // The dev server prints its URL: trust that first (it may pick another port).
       const printed = devs[app]?.log.replace(/\x1b\[[0-9;]*m/g, '').match(/https?:\/\/(?:localhost|127\.0\.0\.1):\d+/)?.[0]
-      if (printed) { try { const r = await fetch(printed, { signal: AbortSignal.timeout(800) }); if (r.status < 500) return { url: printed } } catch {} }
-      const again = await devServer(ctx, app)
-      if (again.url) return { url: again.url }
+      if (printed) { try { const r = await fetch(printed, { signal: AbortSignal.timeout(800) }); if (r.status < 500) { devs[app].url = printed; return { url: printed } } } catch {} }
+      const again = devs[app] ? null : await devServer(ctx, app)
+      if (again?.url) return { url: again.url }
       if (!devs[app]) break
     }
     return { url: null, error: `Dev server chưa lên. ${(devs[app]?.log ?? '').trim().split('\n').slice(-4).join(' ')}` }
   }
 
+  /** Programs Studio needs that this machine lacks, with the install command for this OS (shown on the page). */
+  const missing = () => {
+    const win = process.platform === 'win32'
+    const out = []
+    if (!which('claude')) out.push({ id: 'claude', label: 'Claude Code CLI', why: 'để chat sửa code', fix: win ? 'irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash' })
+    if (!which('npm')) out.push({ id: 'npm', label: 'npm (Node.js)', why: 'để cài thư viện và chạy dev server', fix: win ? 'winget install OpenJS.NodeJS.LTS' : process.platform === 'darwin' ? 'brew install node (hoặc bộ cài ở nodejs.org)' : 'cài Node LTS (nodejs.org, fnm hoặc trình quản lý gói)' })
+    return out
+  }
+
   // ---- HTTP ----
   const html = path.join(here, 'studio.html')
-  const port = Number(opts.port ?? ctx.config.studio?.port ?? 4400)
+  const port = Number(opts.port ?? ctx?.config.studio?.port ?? 4400)
   const origins = new Set([`http://localhost:${port}`, `http://127.0.0.1:${port}`])
   const body = (req) => new Promise((resolve) => { let s = ''; req.on('data', (d) => { s += d; if (s.length > 1e6) req.destroy() }); req.on('end', () => { try { resolve(JSON.parse(s || '{}')) } catch { resolve({}) } }) })
   const sendJson = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)) }
@@ -200,20 +261,63 @@ export async function studio(ctx, deps, opts = {}) {
     const url = new URL(req.url, `http://localhost:${port}`)
     // Local only: reject other hosts (DNS rebinding) and cross-site requests (another site posting a prompt).
     if (!origins.has(`http://${req.headers.host}`)) return sendJson(res, 403, { error: 'host' })
-    if (req.method !== 'GET' && (!origins.has(req.headers.origin) || !/json/.test(req.headers['content-type'] ?? ''))) return sendJson(res, 403, { error: 'origin' })
+    if (req.method !== 'GET' && (!origins.has(req.headers.origin) || !/json|octet-stream/.test(req.headers['content-type'] ?? ''))) return sendJson(res, 403, { error: 'origin' })
 
     if (req.method === 'GET' && url.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
       return res.end(fs.readFileSync(html))
     }
     if (req.method === 'GET' && url.pathname === '/api/state') {
+      if (!ctx) return sendJson(res, 200, { missing: missing(), mode: 'new', base: opts.newDir ?? opts.base, empty: isEmptyDir(opts.newDir ?? opts.base), name: path.basename(opts.newDir ?? opts.base), creating: !!creating })
       let routes = []
-      try { routes = allRoutes(ctx, deps.refresh().index) } catch {}
-      const withUrls = await Promise.all(appList.map(async (a) => ({ ...a, url: (await devServer(ctx, a.dir)).url })))
-      return sendJson(res, 200, { project: ctx.pkg?.name ?? path.basename(ctx.repo), repo: ctx.repo, apps: withUrls, app: state.app, path: state.path, routes, messages: state.messages, running: !!run, permissionMode, playwright })
+      try { routes = allRoutes(ctx, routeIndex()) } catch {}
+      const withUrls = await Promise.all(appList.map(async (a) => ({ ...a, url: await devUrl(a.dir) })))
+      return sendJson(res, 200, { project: ctx.pkg?.name ?? path.basename(ctx.repo), repo: ctx.repo, apps: withUrls, app: state.app, path: state.path, routes, messages: state.messages, running: !!run, permissionMode, playwright, missing: missing() })
     }
+    if (req.method === 'POST' && url.pathname === '/api/create') {
+      const b = await body(req)
+      if (ctx || creating) return sendJson(res, 409, { error: 'exists' })
+      res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
+      const send = (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
+      creating = {}
+      try {
+        const target = await createApp(b.name?.trim() || 'app-moi', (text) => send({ t: 'log', text }))
+        send({ t: 'log', text: 'Bật dev server…' })
+        const dev = await startDev(state.app)
+        send({ t: 'ready', target, url: dev.url })
+      } catch (e) {
+        send({ t: 'error', text: e.message })
+      }
+      creating = null
+      return res.end()
+    }
+    if (req.method === 'POST' && url.pathname === '/api/upload') {
+      const name = path.basename(url.searchParams.get('name') ?? 'file').replace(/[^\p{L}\p{N}._ -]/gu, '_').slice(-80) || 'file'
+      const chunks = []
+      let size = 0, tooBig = false
+      await new Promise((resolve) => {
+        req.on('data', (d) => { size += d.length; if (size > 20e6) { tooBig = true; req.destroy() } else chunks.push(d) })
+        req.on('end', resolve); req.on('close', resolve)
+      })
+      if (tooBig) return sendJson(res, 413, { error: 'File lớn hơn 20MB.' })
+      const ext = path.extname(name).toLowerCase().replace(/[^.a-z0-9]/g, '')
+      const id = `${Date.now().toString(36)}-${slug(path.basename(name, path.extname(name))) || 'file'}${ext}`
+      fs.mkdirSync(uploadsDir(), { recursive: true })
+      fs.writeFileSync(path.join(uploadsDir(), id), Buffer.concat(chunks))
+      return sendJson(res, 200, { id, name, type: mimeOf(name), size })
+    }
+    if (req.method === 'GET' && url.pathname === '/api/file') {
+      const file = findUpload(url.searchParams.get('id'))
+      if (!file) return sendJson(res, 404, { error: 'not found' })
+      // served as a download for anything that could run script in this origin
+      const type = mimeOf(file)
+      res.writeHead(200, { 'content-type': type, 'cache-control': 'private, max-age=86400', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'", ...(/^image\/(png|jpeg|gif|webp)$|^application\/pdf$|^text\/plain$/.test(type) ? {} : { 'content-disposition': 'attachment' }) })
+      return fs.createReadStream(file).pipe(res)
+    }
+    if (!ctx) return sendJson(res, 409, { error: 'no app yet' })
     if (req.method === 'POST' && url.pathname === '/api/chat') {
       const b = await body(req)
+      if (!b.text?.trim() && b.files?.length) b.text = 'Xem file đính kèm.'
       if (!b.text?.trim()) return sendJson(res, 400, { error: 'empty' })
       if (run) return sendJson(res, 409, { error: 'busy' })
       if (b.app) state.app = b.app
@@ -221,16 +325,34 @@ export async function studio(ctx, deps, opts = {}) {
       res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
       const send = (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
       let where = `[Aura Studio] The user is looking at ${state.path} of ${state.app === '.' ? 'the app' : state.app} in the preview${b.width ? ` at ${b.width}px wide` : ''}.`
+      if (state.fresh && !state.messages.length) where += ` This app was just created from the aura starter (src/pages/Index.tsx is a placeholder). Build what the user describes with the aura-ui:build skill: take their description as the brief (ask only if it is truly ambiguous), set the tokens, then compose the screens and routes from the project's components and blocks. Use realistic Vietnamese sample data.`
+      state.fresh = false
       if (!playwright) where += ` Playwright is not installed, so aura verify can't open pages: run it with --skip-inspect "Playwright chưa cài" (Studio shows the user a button to install it). Don't ask to install it yourself.`
-      await chat(b.text.trim(), where, send)
+      // attachments: move staged files (uploaded before the app existed) into the repo, so the agent can read them
+      const attached = []
+      for (const f of Array.isArray(b.files) ? b.files.slice(0, 10) : []) {
+        const id = f?.id ?? f
+        let file = findUpload(id)
+        if (!file) continue
+        if (!file.startsWith(uploadsDir())) { fs.mkdirSync(uploadsDir(), { recursive: true }); const to = path.join(uploadsDir(), id); try { fs.renameSync(file, to) } catch { fs.copyFileSync(file, to); fs.rmSync(file) } file = to }
+        const name = typeof f?.name === 'string' ? path.basename(f.name).slice(-120) : id.replace(/^[a-z0-9]+-/, '')
+        attached.push({ id, name, type: mimeOf(name), size: fs.statSync(file).size, rel: ctx.rel(file) })
+      }
+      await chat(b.text.trim(), where, send, attached)
       return res.end()
     }
     if (req.method === 'POST' && url.pathname === '/api/stop') {
-      if (run) { run.aborted = true; run.child.kill('SIGINT'); setTimeout(() => run?.child.kill('SIGKILL'), 3000) }
+      if (run) { run.aborted = true; killTree(run.child, 'SIGINT'); setTimeout(() => run && killTree(run.child, 'SIGKILL'), 3000) }
       return sendJson(res, 200, { ok: true })
     }
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       if (run) return sendJson(res, 409, { error: 'busy' })
+      // keep the old conversation (and its Claude session id, for claude --resume) instead of dropping it
+      if (state.messages.length) {
+        const dir = path.join(ctx.auraDir, 'cache', 'studio-history')
+        fs.mkdirSync(dir, { recursive: true })
+        fs.writeFileSync(path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ sessionId: state.sessionId, messages: state.messages }, null, 1))
+      }
       Object.assign(state, { sessionId: null, messages: [] }); save()
       return sendJson(res, 200, { ok: true })
     }
@@ -258,7 +380,7 @@ export async function studio(ctx, deps, opts = {}) {
       const runCmd = (cmd) => new Promise((resolve) => {
         const [bin, ...rest] = cmd.split(' ')
         let log = ''
-        const child = spawn(bin, rest, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+        const child = runProgram(bin, rest, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
         child.stdout.on('data', (d) => { log = (log + d).slice(-2000) }); child.stderr.on('data', (d) => { log = (log + d).slice(-2000) })
         child.on('error', (e) => resolve({ code: 1, log: e.message }))
         child.on('close', (code) => resolve({ code, log }))
@@ -278,8 +400,9 @@ export async function studio(ctx, deps, opts = {}) {
   })
 
   const stopAll = () => {
-    run?.child.kill('SIGINT')
-    for (const d of Object.values(devs)) d.child.kill('SIGTERM')
+    if (run) killTree(run.child, 'SIGINT')
+    for (const d of Object.values(devs)) killTree(d.child)
+    fs.rmSync(staging, { recursive: true, force: true })
     process.exit(0)
   }
   process.on('SIGINT', stopAll)
@@ -287,8 +410,10 @@ export async function studio(ctx, deps, opts = {}) {
 
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve) })
   const url = `http://localhost:${port}`
-  console.log(`Aura Studio: ${url}  (repo ${ctx.repo}; Claude Code permission mode: ${permissionMode}; Ctrl+C to stop)`)
-  if (!appList.length) console.log('No package.json with a "dev" script found: the preview stays empty until one exists.')
+  console.log(ctx
+    ? `Aura Studio: ${url}  (repo ${ctx.repo}; Claude Code permission mode: ${permissionMode}; Ctrl+C to stop)`
+    : `Aura Studio: ${url}  (new app: describe it on the page; it is created in ${opts.newDir ?? opts.base}; Ctrl+C to stop)`)
+  if (ctx && !appList.length) console.log('No package.json with a "dev" script found: the preview stays empty until one exists.')
   if (opts.open !== false) openBrowser(url)
   return server
 }
