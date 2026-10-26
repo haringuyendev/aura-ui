@@ -9,7 +9,8 @@ try() {
   return 0
 }
 try "$(command -v node 2>/dev/null)"
-for f in "$HOME"/.nvm/versions/node/*/bin/node \
+for f in "$HOME/.aura-ui/node/current/bin/node" \
+         "$HOME"/.nvm/versions/node/*/bin/node \
          "$HOME/.volta/bin/node" \
          "$HOME"/.local/share/fnm/node-versions/*/installation/bin/node \
          "$HOME"/Library/Application\ Support/fnm/node-versions/*/installation/bin/node \

@@ -21,3 +21,34 @@ jobs:
           node-version: ${{ matrix.node }}
       - name: Smoke test
         run: node scripts/smoke.mjs
+
+  # The Node installer the aura-ui:setup skill runs for users without Node (no admin rights).
+  install-node:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Node into a fresh home (macOS, Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          export HOME="$RUNNER_TEMP/home" && mkdir -p "$HOME"
+          node_bin=$(sh scripts/install-node.sh)
+          "$node_bin" -v
+          "$(dirname "$node_bin")/npm" -v
+          grep -q 'aura-ui: Node.js' "$HOME/.zprofile" 2>/dev/null || grep -q 'aura-ui: Node.js' "$HOME/.profile"
+          found=$(env PATH=/usr/bin:/bin sh scripts/find-node.sh)
+          echo "find-node: $found" && "$found" -v
+      - name: Install Node (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'aura-node'
+          $node = powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-node.ps1 -Dir $dir | Select-Object -Last 1
+          & $node -v
+          & (Join-Path (Split-Path $node) 'npm.cmd') -v
+          $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($userPath -notlike "*$dir*") { throw "user PATH not updated: $userPath" }

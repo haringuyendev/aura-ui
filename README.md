@@ -34,37 +34,39 @@ template/                    starter: Vite + React 19 + TS + Tailwind v4 + shadc
                              blocks/ (page-header, stat, data-table, form…), lib/format.ts, token
 catalog/components.json      danh mục 76 mục của starter (dùng làm từ điển Việt–Anh cho aura find)
 addons/                      rich-text-editor (Tiptap), file-lightbox (PDF/Word/Excel/ảnh)
-scripts/                     smoke.mjs (test end-to-end, CI chạy trên 3 hệ điều hành), find-node.sh|ps1 (tìm Node ngoài PATH), new-app.sh, add-block.mjs, catalog.mjs
+scripts/                     smoke.mjs (test end-to-end, CI chạy trên 3 hệ điều hành), find-node.sh|ps1 (tìm Node ngoài PATH), install-node.sh|ps1 (cài Node không cần admin), new-app.sh, add-block.mjs, catalog.mjs
 references/                  design-system.md, dashboard.md
 evals/                       quy trình A/B, baseline project, công cụ audit/critic, kết quả v3–v6
 ```
 
 ## Cài đặt
-**Máy cần có**
-| | Để làm gì | |
-|---|---|---|
-| Node.js ≥ 20 | CLI aura, hook kiểm tra, Studio, dev server của app | bắt buộc |
-| Claude Code CLI (native installer) | Aura Studio gọi `claude -p` | khi dùng Studio |
-| git | `aura verify` biết file nào đã đổi; lịch sử của app mới | nên có |
-| Playwright + Chromium | `aura verify` mở trang để kiểm tra (Studio có nút cài) | tùy chọn |
-| Git for Windows | Claude Code chạy lệnh và hook bằng Git Bash (không có thì dùng PowerShell; aura vẫn chạy) | Windows, nên có |
-
-Cài đặt từng thứ:
-- **macOS:** `brew install node git`, hoặc dùng bộ cài Node LTS ở nodejs.org. Claude CLI: `curl -fsSL https://claude.ai/install.sh | bash`
-- **Windows:** `winget install OpenJS.NodeJS.LTS` và `winget install Git.Git`. Claude CLI (PowerShell): `irm https://claude.ai/install.ps1 | iex`
-- **Linux:** Node LTS (qua fnm, nvm hoặc trình quản lý gói), git. Claude CLI: `curl -fsSL https://claude.ai/install.sh | bash`
-
-**Cài plugin**
+**Claude Desktop (tab Code) hoặc Claude Code CLI:**
 ```
 /plugin marketplace add haringuyendev/aura-ui
 /plugin install aura-ui@aura-ui
-/aura-ui:setup        # kiểm tra máy; thiếu gì thì đề xuất lệnh cài (hỏi trước khi cài)
+/aura-ui:setup
 ```
-Trong Claude Desktop, cài plugin ở tab **Code**, nút **+ → Add plugins**. Tab chat thường và claude.ai không chạy plugin.
+Trong Claude Desktop có thể cài ở **Customize → Plugins → Add marketplace**, hoặc trong tab **Code**: **+ → Add plugins**.
+CLI và phiên local của Desktop đọc chung cấu hình, nên cài ở một chỗ là chỗ kia cũng có.
 
-**Claude Desktop + nvm/volta/fnm:** Desktop lấy PATH từ login shell. Nếu nvm/volta/fnm chỉ được nạp trong file của
-shell tương tác thì phiên làm việc có thể không thấy `node`, và khi đó hook của aura không chạy. `/aura-ui:setup` phát hiện được trường hợp này (`scripts/find-node.sh`, `scripts/find-node.ps1`)
-và đề xuất thêm `env.PATH` vào `~/.claude/settings.json`.
+**Không cần biết Node.js:** `/aura-ui:setup` kiểm tra máy. Nếu chưa có Node, skill hỏi một câu rồi tự cài bản LTS chính
+thức từ nodejs.org (có kiểm checksum), vào thư mục riêng của user (`~/.aura-ui/node`, trên Windows là
+`%LOCALAPPDATA%\aura-ui\node`). Không cần quyền admin. Sau đó người dùng **thoát hẳn Claude Desktop rồi mở lại** (CLI: mở
+terminal mới). Các skill khác gặp lỗi thiếu `node` cũng tự chuyển sang `setup`. Trước khi cài xong, hook của aura báo lỗi
+"node: command not found" mỗi lần sửa file; lỗi này không chặn gì, cài xong và khởi động lại là hết.
+
+| | Để làm gì | Ai cài |
+|---|---|---|
+| Node.js ≥ 20 | CLI aura, hook kiểm tra, Studio, dev server của app | `/aura-ui:setup` tự cài |
+| Claude Code CLI | Aura Studio gọi `claude -p` (Desktop không cho gọi bản bên trong nó) | `/aura-ui:setup` đề xuất lệnh cài chính thức |
+| git | `aura verify` biết file nào đã đổi; lịch sử của app mới | tùy chọn |
+| Playwright + Chromium | `aura verify` mở trang để kiểm tra | tùy chọn, Studio có nút cài |
+
+Tab chat thường của Desktop và claude.ai chạy trong sandbox trên cloud: skill hiện ra nhưng hook và lệnh local không chạy.
+Hãy dùng tab **Code**.
+
+**Thử nhanh:** trong repo có `.aura/`, bảo agent viết một `<button>` thô trong một page. Thấy "Aura blocked this change" là
+hook đang chạy. CI (`.github/workflows/smoke.yml`) chạy `scripts/smoke.mjs` và thử script cài Node trên macOS, Linux và Windows.
 
 **Agent khác** (Codex, Cursor, Gemini CLI, OpenCode… loại đọc được thư mục skill có `SKILL.md`):
 clone repo rồi copy hoặc symlink các thư mục trong `skills/` vào thư mục skill của agent đó (các skill trỏ
@@ -77,9 +79,6 @@ Agent không hỗ trợ skill: thêm vào `AGENTS.md` của project một dòng 
 `<đường-dẫn>/skills/build/SKILL.md`". Hook chỉ có trên Claude Code; agent khác chạy `node .aura/bin/aura.mjs check --changed` trước khi xong việc.
 Skill `build` tự kích hoạt khi làm hoặc sửa màn hình; các skill khác gọi bằng `/aura-ui:init`, `/aura-ui:find`, `/aura-ui:check`…
 Tạo app mới từ starter: `node manager/aura.mjs new <thư-mục>` (hoặc `/aura-ui:new-app`, hoặc Aura Studio ở thư mục trống).
-
-**Thử nhanh:** trong repo có `.aura/`, bảo agent viết một `<button>` thô trong một page. Nếu thấy "Aura blocked this change"
-thì hook đang chạy. CI (`.github/workflows/smoke.yml`) chạy `scripts/smoke.mjs` trên macOS, Linux và Windows với Node 20 và 22.
 
 ## Đổi design system
 Màu, font, bo góc, shadow, bảng màu biểu đồ nằm trong `src/index.css` của app. Vì màn hình chỉ dùng

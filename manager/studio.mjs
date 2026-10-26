@@ -246,7 +246,7 @@ export async function studio(initialCtx, opts = {}) {
     const win = process.platform === 'win32'
     const out = []
     if (!which('claude')) out.push({ id: 'claude', label: 'Claude Code CLI', why: 'để chat sửa code', fix: win ? 'irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash' })
-    if (!which('npm')) out.push({ id: 'npm', label: 'npm (Node.js)', why: 'để cài thư viện và chạy dev server', fix: win ? 'winget install OpenJS.NodeJS.LTS' : process.platform === 'darwin' ? 'brew install node (hoặc bộ cài ở nodejs.org)' : 'cài Node LTS (nodejs.org, fnm hoặc trình quản lý gói)' })
+    if (!which('npm')) out.push({ id: 'npm', label: 'Node.js', why: 'để cài thư viện và chạy dev server', fix: 'gõ /aura-ui:setup trong Claude (tab Code): skill tự cài Node, không cần admin' })
     return out
   }
 

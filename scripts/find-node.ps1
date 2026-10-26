@@ -3,6 +3,7 @@
 $candidates = @()
 $cmd = Get-Command node -ErrorAction SilentlyContinue
 if ($cmd) { $candidates += $cmd.Source }
+$candidates += Get-ChildItem "$env:LOCALAPPDATA\aura-ui\node\v*\node.exe" -ErrorAction SilentlyContinue | ForEach-Object FullName
 $candidates += "$env:ProgramFiles\nodejs\node.exe", "$env:LOCALAPPDATA\Volta\bin\node.exe", "$env:NVM_SYMLINK\node.exe", "$env:USERPROFILE\scoop\apps\nodejs\current\node.exe"
 if ($env:NVM_HOME) { $candidates += Get-ChildItem "$env:NVM_HOME\v*\node.exe" -ErrorAction SilentlyContinue | ForEach-Object FullName }
 $best = $null; $bestMajor = 0

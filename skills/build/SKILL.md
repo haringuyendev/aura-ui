@@ -12,6 +12,8 @@ hooks:
 
 # Aura build: design system first, compose from the project's components
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 `${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder (Claude Code fills it in; with other agents, use the folder where the aura-ui repo is cloned).
 
 ## Before building

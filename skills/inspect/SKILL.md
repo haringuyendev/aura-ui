@@ -5,6 +5,8 @@ description: Verify UI work before saying it is done with aura verify (checks th
 
 # Aura verify and inspect
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 ## verify: the check before you say it is done
 ```bash
 node .aura/bin/aura.mjs verify                                   # changed UI files (git + this session) → check + the pages that render them

@@ -5,6 +5,8 @@ description: Write registry descriptions for the project's components - what eac
 
 # Aura describe
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 Only registry entries need descriptions: with the default scope `"primitives"` that is the primitives and
 shared blocks, not components that belong to one app.
 

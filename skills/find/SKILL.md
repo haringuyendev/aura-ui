@@ -12,6 +12,8 @@ hooks:
 
 # Aura find
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 Ask the registry, from the repo root. It lists the project's **building blocks** (primitives, shared
 blocks, UI library components), not app-specific components: compose new screens from these. Queries work in Vietnamese or English, accents optional.
 

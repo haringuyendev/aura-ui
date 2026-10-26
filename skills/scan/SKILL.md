@@ -5,6 +5,8 @@ description: Refresh and inspect the Aura registry of a project - full rescan, s
 
 # Aura scan
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 Run from the repo root (it has `.aura/`; if not, use the `aura-ui:init` skill). Prefer the vendored CLI
 `node .aura/bin/aura.mjs`, or `npm run aura --` when the npm script exists.
 

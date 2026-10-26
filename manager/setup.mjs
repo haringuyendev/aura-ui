@@ -12,7 +12,7 @@ const onPath = (file) => !!file && (process.env.PATH ?? '').split(path.delimiter
 function install(tool) {
   const brew = mac && which('brew')
   return {
-    node: isWindows ? 'winget install OpenJS.NodeJS.LTS' : brew ? 'brew install node' : mac ? 'Tải bộ cài Node LTS (.pkg) ở https://nodejs.org rồi chạy' : 'curl -fsSL https://fnm.vercel.app/install | bash && fnm install --lts',
+    node: isWindows ? 'powershell -NoProfile -ExecutionPolicy Bypass -File "<plugin>/scripts/install-node.ps1"   (không cần admin)' : 'sh "<plugin>/scripts/install-node.sh"   (không cần admin)',
     git: isWindows ? 'winget install Git.Git' : brew ? 'brew install git' : mac ? 'xcode-select --install' : 'sudo apt install git (hoặc dnf/pacman tùy bản Linux)',
     claude: isWindows ? 'irm https://claude.ai/install.ps1 | iex   (PowerShell)' : 'curl -fsSL https://claude.ai/install.sh | bash',
     playwright: 'npm i -D playwright && npx playwright install chromium   (trong thư mục app; Studio có nút cài)',
@@ -29,7 +29,9 @@ export function checkSetup(ctx) {
   // hooks run "node …" and would fail. Fix: settings.json env.PATH with this folder first.
   const nodeOnPath = (process.env.PATH ?? '').split(path.delimiter).some((d) => d && (isWindows ? ['node.exe', 'node.cmd'] : ['node']).some((n) => fs.existsSync(path.join(d, n))))
   if (!nodeOnPath)
-    items.push({ id: 'node-path', label: 'Node có trong PATH của phiên Claude', ok: false, detail: `${path.dirname(process.execPath)} chưa có trong PATH, nên hook "node …" của aura không chạy`, fix: `thêm vào ~/.claude/settings.json: "env": { "PATH": "${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ''}" }` })
+    items.push({ id: 'node-path', label: 'Node có trong PATH của phiên Claude', ok: false, detail: `${path.dirname(process.execPath)} chưa có trong PATH, nên hook "node …" của aura không chạy`, fix: isWindows
+      ? `thêm ${path.dirname(process.execPath)} vào PATH của user: [Environment]::SetEnvironmentVariable('Path', '${path.dirname(process.execPath)};' + [Environment]::GetEnvironmentVariable('Path','User'), 'User')   rồi mở lại Claude Desktop`
+      : `thêm dòng sau vào ~/.zprofile (bash: ~/.bash_profile): export PATH="${path.dirname(process.execPath)}:$PATH"  # aura-ui: Node.js   rồi mở lại Claude Desktop` })
   const npm = version('npm')
   items.push({ id: 'npm', label: 'npm', ok: !!npm, detail: npm ? `v${npm}` : 'không có', fix: npm ? null : install('node') })
   const git = version('git')

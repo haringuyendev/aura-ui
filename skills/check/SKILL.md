@@ -5,6 +5,8 @@ description: Run and act on Aura's component rules - duplicate components, raw <
 
 # Aura check
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 ```bash
 node .aura/bin/aura.mjs check <file…>     # specific files
 node .aura/bin/aura.mjs check --changed   # files changed in git (what CI/pre-commit runs)

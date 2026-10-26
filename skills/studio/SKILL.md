@@ -5,6 +5,8 @@ description: Open Aura Studio, a local Lovable-style page for the project - chat
 
 # Aura Studio
 
+> `node` not found ("command not found", "not recognized")? Run the `aura-ui:setup` skill first: it installs Node.js for the user, no admin rights needed.
+
 ```bash
 node .aura/bin/aura.mjs studio                 # http://localhost:4400, opens the browser
 node .aura/bin/aura.mjs studio --app apps/web  # monorepo: which app the preview shows first (switchable on the page)

@@ -1,51 +1,61 @@
 ---
 name: setup
-description: Check and fix what aura-ui needs on this machine - Node.js 20+, npm, git, the Claude Code CLI (for Aura Studio), Playwright (for aura verify) and, on Windows, Git Bash - including Node that is installed but not on the PATH of Claude Desktop sessions (nvm, volta, fnm). Use right after installing the aura-ui plugin, when an Aura hook fails with "node: command not found" or similar, when Aura Studio says claude or npm is missing, or when the user asks whether aura-ui will work on their machine (macOS, Windows, Linux, Claude Desktop).
+description: Get aura-ui working on this machine for people who don't know what Node.js is - checks Node.js 20+, npm, git, the Claude Code CLI (for Aura Studio) and Playwright, and installs Node.js itself (official build, no admin rights) when it is missing, on macOS, Windows and Linux, for Claude Desktop (Code tab) and the Claude Code CLI. Use right after installing the aura-ui plugin, whenever an aura command or hook fails with "node: command not found" / "node is not recognized", when Aura Studio says claude or npm is missing, or when the user asks whether aura-ui works on their machine.
 ---
 
 # Aura setup
 
-Runs on the user's machine only: the Claude Code CLI or the Code tab of Claude Desktop (local session). In the Desktop
-chat tab or on claude.ai the skill runs in a cloud sandbox: say so and point to those two places instead of checking.
+Runs on the user's machine only: the Claude Code CLI or the **Code** tab of Claude Desktop (local session). In the Desktop
+chat tab or on claude.ai the skill runs in a cloud sandbox: say so in one line and point to the Code tab instead.
 
-`${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder.
+Users are often not developers. Talk about what they get ("để aura chạy được"), not about PATH or runtimes, and keep
+each message short. `${CLAUDE_PLUGIN_ROOT}` is the aura-ui plugin folder.
 
-## 1. Find Node
+## 1. Is Node there?
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup
 ```
-If `node` isn't found, look for an installed one before proposing an install:
+It works → go to step 3. `node` not found → look for one that is installed but not on PATH:
 - macOS / Linux / Git Bash: `sh "${CLAUDE_PLUGIN_ROOT}/scripts/find-node.sh"`
 - Windows PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/scripts/find-node.ps1"`
 
-It prints the path of a Node 20+ binary. Run the report with that path: `"<path>" "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup`.
-Nothing found (exit 1): Node is missing or older than 20; go to step 2 with the install command for this OS.
+Found (prints a path) → run the report with it: `"<path>" "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup`; it prints the
+one PATH line to add (step 3). Nothing found → step 2.
 
-## 2. Read the report and fix
-Each line: `✓` ok, `✗` required and missing, `○` optional. A missing item comes with the command for this OS.
+## 2. Install Node (missing or older than 20)
+Ask once, in plain words, e.g.: *"aura-ui cần Node.js để chạy (miễn phí, khoảng 50MB, cài vào thư mục riêng của anh,
+không cần mật khẩu admin). Em cài luôn nhé?"* On yes:
+- macOS / Linux: `sh "${CLAUDE_PLUGIN_ROOT}/scripts/install-node.sh"`
+- Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/scripts/install-node.ps1"`
 
-- **Always ask the user before installing anything or changing settings.** Say what the command does, in one line.
-  Installers that need admin rights or a GUI (the Node .pkg on macOS, winget prompts): give the user the command or the
-  link and let them run it.
-- **Node installed but not on the session's PATH** (`✗ Node có trong PATH của phiên Claude`): can happen in Claude
-  Desktop with Node from nvm/volta/fnm when the login shell doesn't export it (Desktop reads the login shell's
-  environment, so a PATH set only in an interactive-shell file can be missing). Aura's hooks run `node …`, so they fail there. With the user's
-  agreement, add the PATH line the report prints to the `env` block of `~/.claude/settings.json` (merge with what is
-  there; it is a full literal PATH, `$PATH` isn't expanded), then restart the session. Alternative: install Node with the
-  official installer or Homebrew, which put it in a folder GUI apps see.
-- **Claude Code CLI** (needed by Aura Studio only): the native installer, no Node required. The copy inside Claude Desktop
-  can't be started by other programs, so Studio needs the CLI even when the user works in Desktop.
-- **Windows without Git Bash**: aura works (hooks run `node …` in PowerShell); Git for Windows is still recommended.
-- **Playwright**: optional, per project. Without it `aura verify` checks code only. Studio has an install button.
+The script downloads the current LTS from nodejs.org, checks its SHA-256 against nodejs.org's list, installs it in
+`~/.aura-ui/node` (Windows: `%LOCALAPPDATA%\aura-ui\node`) and adds it to PATH (macOS/Linux: a line in `~/.zprofile` /
+`~/.profile`; Windows: the user PATH). It prints the path of `node`. Use that path for the rest of this session
+(`"<path>" "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup`), because the session started before PATH changed.
 
-## 3. Check that the hooks run
-After fixing, start a new session (hooks and PATH are read at start) in a repo with `.aura/` and ask for a change that
-writes a raw `<button>` in a page. Aura should block it ("Aura blocked this change"). No block and no Aura line at
-session start: the hooks aren't running; re-run step 1 inside that session.
+Then tell the user the one thing they must do: **quit Claude Desktop completely and open it again** (CLI: open a new
+terminal and run `claude` again). Aura's checks start working in the new session.
 
-## Supported
+Download blocked (no network, proxy) → give the link https://nodejs.org (LTS installer) and say to run it, then restart.
+
+## 3. Fix the rest from the report
+`✓` ok, `✗` required, `○` optional; each missing item has its command. Ask before running anything that installs or
+changes settings.
+- **Node not on the session's PATH** (`✗ Node có trong PATH của phiên Claude`): add the line the report prints (with
+  the user's OK), then restart Claude Desktop / the terminal.
+- **Claude Code CLI** (only for Aura Studio): the official installer, no Node needed. The copy inside Claude Desktop
+  can't be started by other programs, so Studio needs it even in Desktop. macOS/Linux:
+  `curl -fsSL https://claude.ai/install.sh | bash`; Windows PowerShell: `irm https://claude.ai/install.ps1 | iex`.
+- **git**: optional; macOS offers it with `xcode-select --install`, Windows `winget install Git.Git`.
+- **Playwright**: optional, per project; Studio has an install button.
+
+## 4. Check it works (after the restart)
+In a project with `.aura/`, ask for a page with a raw `<button>`. Aura should stop it ("Aura blocked this change").
+Nothing happens → run step 1 again in that session.
+
+## Where aura-ui runs
 | Where | Works |
 |---|---|
 | Claude Code CLI (macOS, Linux, Windows) | everything |
-| Claude Desktop, Code tab (local session) | plugins and skills; hooks need Node on that session's PATH (step 2); Studio needs the CLI |
-| Claude Desktop chat, claude.ai | not supported: no plugins, hooks or local processes |
+| Claude Desktop, Code tab (local session) | everything; Studio also needs the Claude Code CLI |
+| Claude Desktop chat tab, claude.ai | not supported: no hooks or local processes |

@@ -12,9 +12,10 @@ const home = os.homedir()
 
 /** Folders where Node, package managers and the claude CLI are installed when they aren't on PATH. */
 export function extraBinDirs() {
-  const dirs = [path.dirname(process.execPath), path.join(home, '.local', 'bin'), path.join(home, '.claude', 'local'), path.join(home, '.volta', 'bin'), path.join(home, '.bun', 'bin')]
+  const dirs = [path.dirname(process.execPath), path.join(home, '.aura-ui', 'node', 'current', 'bin'), path.join(home, '.local', 'bin'), path.join(home, '.claude', 'local'), path.join(home, '.volta', 'bin'), path.join(home, '.bun', 'bin')]
   if (isWindows) {
     const { APPDATA = '', LOCALAPPDATA = '', ProgramFiles = 'C:\\Program Files' } = process.env
+    try { for (const v of fs.readdirSync(path.join(LOCALAPPDATA, 'aura-ui', 'node')).sort().reverse()) dirs.push(path.join(LOCALAPPDATA, 'aura-ui', 'node', v)) } catch {}
     dirs.push(path.join(ProgramFiles, 'nodejs'), path.join(APPDATA, 'npm'), path.join(LOCALAPPDATA, 'Volta', 'bin'), path.join(home, 'scoop', 'shims'), path.join(LOCALAPPDATA, 'pnpm'))
   } else {
     dirs.push('/opt/homebrew/bin', '/usr/local/bin', path.join(home, '.asdf', 'shims'), path.join(home, '.local', 'share', 'mise', 'shims'), path.join(home, 'Library', 'pnpm'), path.join(home, '.local', 'share', 'pnpm'))
