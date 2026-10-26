@@ -115,7 +115,7 @@ await step('Studio opens on "new app" in an empty folder', async () => {
     assert(st.mode === 'new' && st.empty === true, JSON.stringify(st))
     // create from the page's API: copy + install + init, then the dev server for the preview
     const res = await fetch(`${s.base}/api/create`, { method: 'POST', headers: { origin: s.base, 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Quản lý kho' }) })
-    const events = (await res.text()).split('\n\n').filter(Boolean).map((c) => JSON.parse(c.slice(6)))
+    const events = (await res.text()).split('\n\n').filter((c) => c.startsWith('data: ')).map((c) => JSON.parse(c.slice(6)))
     const ready = events.find((e) => e.t === 'ready')
     assert(ready?.url, `no ready event: ${JSON.stringify(events.filter((e) => e.t !== 'log'))}\n${events.slice(-5).map((e) => e.text).join('\n')}`)
     const page = await fetch(ready.url)

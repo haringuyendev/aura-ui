@@ -20,7 +20,7 @@ try {
   if ($sums -is [byte[]]) { $sums = [Text.Encoding]::ASCII.GetString($sums) }
   $expected = (($sums -split "`n") | Where-Object { $_ -match "  $([regex]::Escape($file))\s*$" } | Select-Object -First 1) -replace '\s.*$', ''
   $actual = (Get-FileHash (Join-Path $tmp $file) -Algorithm SHA256).Hash.ToLower()
-  if (-not $expected -or $expected.Trim().ToLower() -ne $actual) { throw "Checksum mismatch for $file: not installing" }
+  if (-not $expected -or $expected.Trim().ToLower() -ne $actual) { throw "Checksum mismatch for ${file}: not installing" }
   Expand-Archive (Join-Path $tmp $file) -DestinationPath $tmp
   New-Item -ItemType Directory -Force $Dir | Out-Null
   $dest = Join-Path $Dir $ver

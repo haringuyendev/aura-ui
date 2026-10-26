@@ -250,6 +250,15 @@ export async function studio(initialCtx, opts = {}) {
     return out
   }
 
+  /** Start a text/event-stream response; returns send(event). A comment every 15s keeps quiet stretches (npm install,
+   *  long tool runs) from hitting idle timeouts in browsers and fetch clients. */
+  const eventStream = (res) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
+    const ping = setInterval(() => { if (!res.writableEnded) res.write(': ping\n\n') }, 15000)
+    res.on('close', () => clearInterval(ping))
+    return (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
+  }
+
   // ---- HTTP ----
   const html = path.join(here, 'studio.html')
   const port = Number(opts.port ?? ctx?.config.studio?.port ?? 4400)
@@ -277,8 +286,7 @@ export async function studio(initialCtx, opts = {}) {
     if (req.method === 'POST' && url.pathname === '/api/create') {
       const b = await body(req)
       if (ctx || creating) return sendJson(res, 409, { error: 'exists' })
-      res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
-      const send = (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
+      const send = eventStream(res)
       creating = {}
       try {
         const target = await createApp(b.name?.trim() || 'app-moi', (text) => send({ t: 'log', text }))
@@ -322,8 +330,7 @@ export async function studio(initialCtx, opts = {}) {
       if (run) return sendJson(res, 409, { error: 'busy' })
       if (b.app) state.app = b.app
       if (b.path) state.path = b.path
-      res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store', connection: 'keep-alive' })
-      const send = (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
+      const send = eventStream(res)
       let where = `[Aura Studio] The user is looking at ${state.path} of ${state.app === '.' ? 'the app' : state.app} in the preview${b.width ? ` at ${b.width}px wide` : ''}.`
       if (state.fresh && !state.messages.length) where += ` This app was just created from the aura starter (src/pages/Index.tsx is a placeholder). Build what the user describes with the aura-ui:build skill: take their description as the brief (ask only if it is truly ambiguous), set the tokens, then compose the screens and routes from the project's components and blocks. Use realistic Vietnamese sample data.`
       state.fresh = false
