@@ -34,8 +34,7 @@ template/                    starter: Vite + React 19 + TS + Tailwind v4 + shadc
                              blocks/ (page-header, stat, data-table, form…), lib/format.ts, token
 catalog/components.json      danh mục 76 mục của starter (dùng làm từ điển Việt–Anh cho aura find)
 addons/                      rich-text-editor (Tiptap), file-lightbox (PDF/Word/Excel/ảnh)
-scripts/                     smoke.mjs (test end-to-end, CI chạy trên 3 hệ điều hành), new-app.sh, add-block.mjs, catalog.mjs
-bin/                         find-node.sh, find-node.ps1 (tìm Node khi phiên Claude không có trong PATH)
+scripts/                     smoke.mjs (test end-to-end, CI chạy trên 3 hệ điều hành), find-node.sh|ps1 (tìm Node ngoài PATH), new-app.sh, add-block.mjs, catalog.mjs
 references/                  design-system.md, dashboard.md
 evals/                       quy trình A/B, baseline project, công cụ audit/critic, kết quả v3–v6
 ```
@@ -64,7 +63,7 @@ Cài đặt từng thứ:
 Trong Claude Desktop, cài plugin ở tab **Code**, nút **+ → Add plugins**. Tab chat thường và claude.ai không chạy plugin.
 
 **Claude Desktop + nvm/volta/fnm:** mở Desktop từ Dock thì phiên làm việc có thể không thấy `node`, vì Desktop không đọc
-`.zshrc`. Khi đó hook của aura không chạy. `/aura-ui:setup` phát hiện được trường hợp này (`bin/find-node.sh`, `bin/find-node.ps1`)
+`.zshrc`. Khi đó hook của aura không chạy. `/aura-ui:setup` phát hiện được trường hợp này (`scripts/find-node.sh`, `scripts/find-node.ps1`)
 và đề xuất thêm `env.PATH` vào `~/.claude/settings.json`.
 
 **Agent khác** (Codex, Cursor, Gemini CLI, OpenCode… loại đọc được thư mục skill có `SKILL.md`):

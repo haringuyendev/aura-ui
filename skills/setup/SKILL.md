@@ -12,8 +12,8 @@ description: Check and fix what aura-ui needs on this machine - Node.js 20+, npm
 node "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup
 ```
 If `node` isn't found, look for an installed one before proposing an install:
-- macOS / Linux / Git Bash: `sh "${CLAUDE_PLUGIN_ROOT}/bin/find-node.sh"`
-- Windows PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/bin/find-node.ps1"`
+- macOS / Linux / Git Bash: `sh "${CLAUDE_PLUGIN_ROOT}/scripts/find-node.sh"`
+- Windows PowerShell: `powershell -NoProfile -ExecutionPolicy Bypass -File "${CLAUDE_PLUGIN_ROOT}/scripts/find-node.ps1"`
 
 It prints the path of a Node 20+ binary. Run the report with that path: `"<path>" "${CLAUDE_PLUGIN_ROOT}/manager/aura.mjs" setup`.
 Nothing found (exit 1): Node is missing or older than 20; go to step 2 with the install command for this OS.
