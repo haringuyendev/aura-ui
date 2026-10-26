@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aura Studio</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%230f766e'/%3E%3Cpath d='M12 5l1.9 4.6L18.5 12l-4.6 1.9L12 18.5l-1.9-4.6L5.5 12l4.6-2.4z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --fg: #1c1c1a; --muted: #6b6b66; --faint: #9a9a93;
+  --line: #e4e3df; --soft: #efeeea; --accent: #0f766e; --accent-fg: #ffffff; --accent-soft: #e3f1ef;
+  --warn: #9a5b00; --warn-soft: #fbf1e1; --danger: #b42318; --danger-soft: #fdecea; --ok: #15803d;
+  --user: #eceae4; --shadow: 0 1px 2px rgb(0 0 0 / .05), 0 4px 16px rgb(0 0 0 / .06);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121211; --panel: #1a1a19; --fg: #ececea; --muted: #a3a39c; --faint: #75756f;
+  --line: #2c2c2a; --soft: #232322; --accent: #2dd4bf; --accent-fg: #062b27; --accent-soft: #123a35;
+  --warn: #f5b454; --warn-soft: #3a2a10; --danger: #f87171; --danger-soft: #3b1715; --ok: #4ade80;
+  --user: #262624; --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 4px 16px rgb(0 0 0 / .3);
+} }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 14px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+svg { flex: none; }
+
+.app { display: grid; grid-template-columns: minmax(340px, 420px) 1fr; grid-template-rows: minmax(0, 1fr); height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* ---- chat ---- */
+.chat { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+.chat-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: -.01em; }
+.brand-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; }
+.project { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.spacer { flex: 1; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--muted); }
+.icon-btn:hover { background: var(--soft); color: var(--fg); }
+.icon-btn:disabled { opacity: .45; cursor: default; background: transparent; }
+.icon-btn[aria-pressed="true"] { background: var(--soft); color: var(--fg); border-color: var(--line); }
+
+.messages { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+.msg-user { align-self: flex-end; max-width: 88%; background: var(--user); padding: 8px 12px; border-radius: 14px 14px 4px 14px; white-space: pre-wrap; word-wrap: break-word; }
+.msg-ai { display: flex; flex-direction: column; gap: 8px; }
+.msg-ai .text { word-wrap: break-word; }
+.text p { margin: 0 0 8px; } .text p:last-child { margin-bottom: 0; }
+.text ul, .text ol { margin: 0 0 8px; padding-left: 20px; }
+.text code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 5px; border-radius: 5px; }
+.text pre { margin: 0 0 8px; background: var(--soft); padding: 10px 12px; border-radius: 8px; overflow-x: auto; }
+.text pre code { background: none; padding: 0; }
+.steps { border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
+.steps > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 7px 10px; color: var(--muted); font-size: 13px; cursor: pointer; user-select: none; }
+.steps > summary::-webkit-details-marker { display: none; }
+.steps > summary .chev { transition: transform .15s; }
+.steps[open] > summary .chev { transform: rotate(90deg); }
+.steps ol { list-style: none; margin: 0; padding: 0 10px 8px; display: flex; flex-direction: column; gap: 3px; }
+.step { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); min-width: 0; }
+.step span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.step.sub { padding-left: 18px; }
+.step .st-ok { color: var(--ok); } .step .st-error { color: var(--danger); }
+.spin { width: 12px; height: 12px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.aura-note { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--warn); background: var(--warn-soft); padding: 7px 10px; border-radius: 8px; }
+.approve { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--panel); box-shadow: var(--shadow); }
+.approve b { font-family: var(--mono); font-weight: 600; font-size: 13px; }
+.approve .row { display: flex; gap: 8px; }
+.meta { font-size: 12px; color: var(--faint); }
+.typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); animation: blink 1.2s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+.empty-chat { margin: auto 0; display: flex; flex-direction: column; gap: 14px; padding: 8px 4px; }
+.empty-chat h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; line-height: 1.3; }
+.empty-chat p { margin: 0; color: var(--muted); }
+.ideas { display: flex; flex-direction: column; gap: 6px; }
+.idea { text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 12px; color: var(--fg); }
+.idea:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.banner { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--warn-soft); color: var(--warn); font-size: 12.5px; border-bottom: 1px solid var(--line); }
+.banner[hidden] { display: none; }
+.banner code { font-family: var(--mono); }
+.banner .btn { flex: none; color: var(--fg); }
+.composer { flex: none; padding: 12px 16px 16px; border-top: 1px solid var(--line); }
+.box { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: 8px; transition: border-color .15s, box-shadow .15s; }
+.box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.box textarea { width: 100%; border: 0; outline: 0; resize: none; background: transparent; padding: 4px 6px; max-height: 200px; min-height: 44px; line-height: 1.5; }
+.box-foot { display: flex; align-items: center; gap: 8px; }
+.where { font-size: 12px; color: var(--muted); padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); font-weight: 550; white-space: nowrap; }
+.btn:hover { background: var(--soft); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn-primary:hover { background: var(--accent); filter: brightness(1.08); }
+.btn-primary:disabled { opacity: .4; cursor: default; filter: none; }
+.btn-stop { background: var(--fg); border-color: var(--fg); color: var(--panel); }
+.btn-sm { height: 30px; padding: 0 12px; font-size: 13px; }
+
+/* ---- preview ---- */
+.preview { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.toolbar { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.field { height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 0 10px; outline: 0; }
+.field:focus { border-color: var(--accent); }
+.address { display: flex; align-items: center; flex: 1; min-width: 180px; height: 32px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding-left: 10px; }
+.address:focus-within { border-color: var(--accent); }
+.address .origin { color: var(--faint); font-size: 13px; white-space: nowrap; }
+.address input { flex: 1; min-width: 60px; border: 0; outline: 0; background: transparent; height: 100%; padding: 0 8px 0 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: var(--bg); }
+.seg button { height: 26px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--fg); box-shadow: var(--shadow); }
+.stage { flex: 1; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; padding: 0; }
+.stage.framed { padding: 16px; }
+.frame-wrap { transform-origin: top center; background: #fff; flex: none; }
+.stage.framed .frame-wrap { border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; border: 1px solid var(--line); }
+iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff; }
+.stage-empty { margin: auto; text-align: center; max-width: 380px; display: flex; flex-direction: column; gap: 10px; align-items: center; padding: 24px; }
+.stage-empty h3 { margin: 0; font-size: 16px; }
+.stage-empty p { margin: 0; color: var(--muted); }
+.stage-empty code { font-family: var(--mono); font-size: 12.5px; background: var(--soft); padding: 1px 6px; border-radius: 5px; }
+.err { color: var(--danger); font-size: 13px; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; overflow: visible; }
+  .chat { height: 70vh; border-right: 0; border-bottom: 1px solid var(--line); }
+  .preview { height: 80vh; }
+  .seg .wide { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="chat">
+    <header class="chat-head">
+      <div class="brand"><span class="brand-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/></svg></span>Aura Studio</div>
+      <span class="project" id="project"></span>
+      <span class="spacer"></span>
+      <button class="icon-btn" id="reset" title="Cuộc trò chuyện mới" aria-label="Cuộc trò chuyện mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+    </header>
+    <div class="banner" id="pwbanner" hidden><span>Chưa có Playwright nên <code>aura verify</code> chưa mở được trang để kiểm tra.</span><button class="btn btn-sm" id="pwinstall" type="button">Cài Playwright</button></div>
+    <div class="messages" id="messages" aria-live="polite"></div>
+    <form class="composer" id="composer">
+      <div class="box">
+        <textarea id="input" rows="2" placeholder="Mô tả thay đổi anh muốn, ví dụ: thêm bộ lọc theo trạng thái cho bảng đơn hàng"></textarea>
+        <div class="box-foot">
+          <span class="where" id="where"></span>
+          <span class="spacer"></span>
+          <button class="btn btn-primary btn-sm" id="send" type="submit" disabled>Gửi
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+        </div>
+      </div>
+    </form>
+  </aside>
+
+  <main class="preview">
+    <div class="toolbar">
+      <select class="field" id="app" aria-label="App" hidden></select>
+      <label class="address"><span class="origin" id="origin"></span><input id="path" list="routes" spellcheck="false" aria-label="Đường dẫn trang"></label>
+      <datalist id="routes"></datalist>
+      <div class="seg" role="group" aria-label="Khung xem">
+        <button type="button" data-w="0" aria-pressed="true" title="Vừa khung">Vừa khung</button>
+        <button type="button" data-w="1440" class="wide" title="Desktop 1440px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>1440</button>
+        <button type="button" data-w="768" title="Tablet 768px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/></svg>768</button>
+        <button type="button" data-w="390" title="Điện thoại 390px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>390</button>
+      </div>
+      <button class="icon-btn" id="reload" title="Tải lại" aria-label="Tải lại"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4L21 8"/><path d="M21 3v5h-5"/></svg></button>
+      <a class="icon-btn" id="newtab" target="_blank" rel="noopener" title="Mở tab mới" aria-label="Mở tab mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></a>
+    </div>
+    <div class="stage" id="stage"></div>
+  </main>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id)
+const S = { apps: [], app: '.', path: '/', routes: [], messages: [], running: false, width: 0, url: null }
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+const api = (p, body) => fetch(p, body === undefined ? {} : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+
+const ICON = {
+  ok: '<svg class="st-ok" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>',
+  error: '<svg class="st-error" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  run: '<i class="spin"></i>',
+  chev: '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+  shield: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:3px"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/></svg>',
+}
+
+/* Small markdown: paragraphs, lists, **bold**, `code`, ``` fences. */
+function md(src) {
+  const blocks = String(src).replace(/\r/g, '').split(/```(\w*)\n?([\s\S]*?)(?:```|$)/)
+  let out = ''
+  for (let i = 0; i < blocks.length; i += 3) {
+    const inline = (t) => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    const kind = (l) => /^\s*[-*•]\s/.test(l) ? 'ul' : /^\s*\d+[.)]\s/.test(l) ? 'ol' : 'p'
+    for (const b of blocks[i].split(/\n{2,}/).filter((b) => b.trim())) {
+      // runs of list lines and plain lines inside one block ("Đã sửa:\n- a\n- b")
+      const runs = []
+      for (const l of b.split('\n')) { const k = kind(l); runs.at(-1)?.k === k ? runs.at(-1).lines.push(l) : runs.push({ k, lines: [l] }) }
+      out += runs.map((r) => r.k === 'p'
+        ? `<p>${r.lines.map(inline).join('<br>')}</p>`
+        : `<${r.k}>${r.lines.map((l) => `<li>${inline(l.replace(/^\s*(?:[-*•]|\d+[.)])\s/, ''))}</li>`).join('')}</${r.k}>`).join('')
+    }
+    if (blocks[i + 2] !== undefined) out += `<pre><code>${esc(blocks[i + 2].replace(/\n$/, ''))}</code></pre>`
+  }
+  return out
+}
+
+function renderReply(m, live) {
+  const el = document.createElement('div')
+  el.className = 'msg-ai'
+  // consecutive tool steps → one collapsible group
+  const groups = []
+  for (const p of m.parts ?? []) {
+    if (p.kind === 'tool') { const g = groups.at(-1); g?.kind === 'steps' ? g.items.push(p) : groups.push({ kind: 'steps', items: [p] }) }
+    else groups.push(p)
+  }
+  groups.forEach((g, gi) => {
+    if (g.kind === 'text') el.insertAdjacentHTML('beforeend', `<div class="text">${md(g.text)}</div>`)
+    else if (g.kind === 'aura') el.insertAdjacentHTML('beforeend', `<div class="aura-note">${ICON.shield}<span>${esc(g.text)}</span></div>`)
+    else if (g.kind === 'approve') {
+      const file = g.name.includes('/')
+      const card = document.createElement('div')
+      card.className = 'approve'
+      card.innerHTML = `<div>Agent muốn ${file ? 'tạo primitive mới' : 'thêm primitive'} <b>${esc(g.name)}</b> vào bộ UI dùng chung của dự án.</div>` + (g.decided
+        ? `<div class="meta">${g.decided === 'yes' ? 'Anh đã đồng ý.' : 'Anh đã từ chối.'}</div>`
+        : `<div class="row"><button class="btn btn-primary btn-sm" data-ok="1">Đồng ý thêm</button><button class="btn btn-sm" data-ok="0">Không, dùng cái có sẵn</button></div>`)
+      card.querySelectorAll('button').forEach((b) => b.onclick = () => decide(g.name, b.dataset.ok === '1'))
+      el.appendChild(card)
+    } else if (g.kind === 'steps') {
+      const running = g.items.some((t) => t.status === 'run')
+      const last = gi === groups.length - 1
+      const d = document.createElement('details')
+      d.className = 'steps'
+      d.open = (live && last) || g.items.length <= 2
+      const n = g.items.filter((t) => !t.sub).length || g.items.length
+      d.innerHTML = `<summary>${ICON.chev}${running ? ICON.run : ''}<span>${running ? 'Đang làm' : 'Đã làm'} ${n} bước</span></summary><ol>${g.items.map((t) => `<li class="step${t.sub ? ' sub' : ''}">${ICON[t.status] ?? ''}<span title="${esc(t.label)}">${esc(t.label)}</span></li>`).join('')}</ol>`
+      el.appendChild(d)
+    }
+  })
+  if (live && !(m.parts ?? []).some((p) => p.kind === 'text' && p === m.parts.at(-1))) el.insertAdjacentHTML('beforeend', '<span class="typing"><i></i><i></i><i></i></span>')
+  if (m.meta && !live) {
+    const bits = []
+    if (m.meta.stopped) bits.push('Đã dừng')
+    else if (!m.meta.ok) bits.push('Có lỗi')
+    if (m.meta.ms) bits.push(`${Math.round(m.meta.ms / 1000)} giây`)
+    if (m.meta.cost) bits.push(`$${m.meta.cost.toFixed(3)}`)
+    if (bits.length) el.insertAdjacentHTML('beforeend', `<div class="meta">${bits.join(' · ')}</div>`)
+  }
+  return el
+}
+
+const IDEAS = ['Làm trang này gọn và dễ đọc hơn', 'Thêm bộ lọc theo trạng thái và ô tìm kiếm cho bảng', 'Hiển thị trạng thái bằng màu cho dễ nhận biết', 'Kiểm tra trang này trên điện thoại và sửa chỗ vỡ bố cục']
+function renderMessages() {
+  const box = $('messages')
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80
+  box.innerHTML = ''
+  if (!S.messages.length) {
+    box.innerHTML = `<div class="empty-chat"><h2>Anh muốn sửa gì trên giao diện?</h2><p>Nhắn yêu cầu bằng tiếng Việt. Agent sửa code trong repo, dùng component của dự án và chạy aura verify trước khi báo xong. Trang bên phải tự cập nhật.</p><div class="ideas">${IDEAS.map((i) => `<button class="idea" type="button">${esc(i)}</button>`).join('')}</div></div>`
+    box.querySelectorAll('.idea').forEach((b) => b.onclick = () => { $('input').value = b.textContent; syncSend(); $('input').focus() })
+    return
+  }
+  S.messages.forEach((m, i) => {
+    if (m.role === 'user') box.insertAdjacentHTML('beforeend', `<div class="msg-user">${esc(m.text)}</div>`)
+    else box.appendChild(renderReply(m, S.running && i === S.messages.length - 1))
+  })
+  if (atBottom || S.running) box.scrollTop = box.scrollHeight
+}
+
+/* ---- sending ---- */
+function syncSend() {
+  const b = $('send')
+  if (S.running) { b.disabled = false; b.className = 'btn btn-stop btn-sm'; b.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"/></svg>Dừng' }
+  else { b.className = 'btn btn-primary btn-sm'; b.disabled = !$('input').value.trim(); b.innerHTML = 'Gửi <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>' }
+  $('reset').disabled = S.running
+}
+
+async function send(text) {
+  if (!text.trim() || S.running) return
+  S.running = true
+  const reply = { role: 'assistant', parts: [] }
+  S.messages.push({ role: 'user', text }, reply)
+  $('input').value = ''; autosize(); syncSend(); renderMessages()
+  const width = S.width || Math.round($('stage').clientWidth)
+  try {
+    const res = await api('/api/chat', { text, app: S.app, path: S.path, width })
+    if (!res.ok) throw new Error(res.status === 409 ? 'Agent đang chạy một yêu cầu khác.' : `Lỗi ${res.status}`)
+    const reader = res.body.getReader(), dec = new TextDecoder()
+    let buf = ''
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buf += dec.decode(value, { stream: true })
+      let i
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, i); buf = buf.slice(i + 2)
+        if (chunk.startsWith('data: ')) onEvent(reply, JSON.parse(chunk.slice(6)))
+      }
+    }
+  } catch (e) {
+    reply.parts.push({ kind: 'text', text: `⚠️ ${e.message}` })
+  }
+  S.running = false
+  syncSend(); renderMessages()
+}
+
+let edited = false
+function onEvent(reply, e) {
+  if (e.t === 'text') { const last = reply.parts.at(-1); last?.kind === 'text' && !e.fresh ? (last.text += e.text) : reply.parts.push({ kind: 'text', text: e.text }) }
+  else if (e.t === 'tool') { reply.parts.push({ kind: 'tool', id: e.id, label: e.label, sub: e.sub, status: 'run' }); if (/^(Sửa|Tạo|Ghi) /.test(e.label)) edited = true }
+  else if (e.t === 'tool_done') { const t = reply.parts.find((p) => p.id === e.id); if (t) t.status = e.status }
+  else if (e.t === 'aura') reply.parts.push({ kind: 'aura', text: e.text })
+  else if (e.t === 'approve') reply.parts.push({ kind: 'approve', name: e.name })
+  else if (e.t === 'done') { Object.assign(reply, e.message); if (edited) reloadFrame(); edited = false }
+  renderMessages()
+}
+
+async function decide(name, ok) {
+  await api('/api/approve', { name, ok })
+  for (const m of S.messages) for (const p of m.parts ?? []) if (p.kind === 'approve' && p.name === name) p.decided = ok ? 'yes' : 'no'
+  renderMessages()
+  send(ok ? `Đồng ý thêm ${name}, anh làm tiếp đi.` : `Không thêm ${name}. Dùng component đang có trong dự án.`)
+}
+
+/* ---- preview ---- */
+const appInfo = () => S.apps.find((a) => a.dir === S.app)
+function renderPreview() {
+  const a = appInfo(), stage = $('stage')
+  S.url = a?.url ?? null
+  $('origin').textContent = S.url ? S.url.replace(/^https?:\/\//, '') : 'chưa có dev server'
+  $('path').value = S.path
+  $('newtab').href = S.url ? S.url + S.path : '#'
+  $('where').textContent = `Đang xem ${S.path}${S.width ? ` · ${S.width}px` : ''}`
+  if (!S.url) {
+    stage.className = 'stage'
+    stage.innerHTML = a
+      ? `<div class="stage-empty"><h3>Chưa có dev server cho ${esc(a.name)}</h3><p>Studio sẽ chạy <code>${esc(a.dev)}</code> trong <code>${esc(a.dir)}</code> rồi hiện trang ở đây.</p><button class="btn btn-primary" id="startdev">Chạy dev server</button><div class="err" id="deverr"></div></div>`
+      : `<div class="stage-empty"><h3>Không tìm thấy app để xem trước</h3><p>Cần một <code>package.json</code> có script <code>dev</code>. Anh vẫn chat để sửa code được.</p></div>`
+    $('startdev')?.addEventListener('click', startDev)
+    return
+  }
+  stage.className = 'stage' + (S.width ? ' framed' : '')
+  stage.innerHTML = `<div class="frame-wrap" id="wrap"><iframe id="frame" title="Xem trước" src="${esc(S.url + S.path)}"></iframe></div>`
+  layoutFrame()
+  $('frame').addEventListener('load', () => {
+    // Same-origin pages (rare) tell us their path; otherwise the address bar keeps what was typed.
+    try { const p = $('frame').contentWindow.location.pathname; if (p && p !== S.path) { S.path = p; $('path').value = p; saveView() } } catch {}
+  })
+}
+function layoutFrame() {
+  const wrap = $('wrap'), stage = $('stage')
+  if (!wrap) return
+  if (!S.width) { wrap.style.cssText = 'width:100%;height:100%'; return }
+  const pad = 32, availW = stage.clientWidth - pad, availH = stage.clientHeight - pad
+  const scale = Math.min(1, availW / S.width)
+  wrap.style.cssText = `width:${S.width}px;height:${availH / scale}px;transform:scale(${scale})`
+}
+function reloadFrame() { const f = $('frame'); if (f) f.src = S.url + S.path }
+function saveView() { api('/api/view', { app: S.app, path: S.path }) }
+
+async function startDev() {
+  const btn = $('startdev')
+  btn.disabled = true; btn.innerHTML = '<i class="spin"></i> Đang chạy…'
+  const r = await (await api('/api/dev', { app: S.app })).json()
+  if (r.url) { appInfo().url = r.url; renderPreview() }
+  else { btn.disabled = false; btn.textContent = 'Thử lại'; $('deverr').textContent = r.error ?? 'Không chạy được dev server.' }
+}
+
+/* ---- wiring ---- */
+function autosize() { const t = $('input'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 200) + 'px' }
+$('input').addEventListener('input', () => { autosize(); syncSend() })
+$('input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!S.running) send($('input').value) } })
+$('composer').addEventListener('submit', (e) => { e.preventDefault(); S.running ? api('/api/stop', {}) : send($('input').value) })
+$('reset').addEventListener('click', async () => { if (S.running || !S.messages.length) return; await api('/api/reset', {}); S.messages = []; renderMessages() })
+$('reload').addEventListener('click', reloadFrame)
+$('path').addEventListener('change', () => { let p = $('path').value.trim() || '/'; if (!p.startsWith('/')) p = '/' + p; S.path = p; saveView(); renderPreview() })
+$('app').addEventListener('change', () => { S.app = $('app').value; S.path = '/'; saveView(); renderRoutes(); renderPreview() })
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', x === b))
+  S.width = Number(b.dataset.w); try { localStorage.setItem('aura-studio-width', S.width) } catch {}
+  renderPreview()
+}))
+window.addEventListener('resize', layoutFrame)
+$('pwinstall').addEventListener('click', async () => {
+  const b = $('pwinstall')
+  b.disabled = true; b.innerHTML = '<i class="spin"></i> Đang cài…'
+  const r = await (await api('/api/playwright', {})).json()
+  if (r.ok) $('pwbanner').hidden = true
+  else { b.disabled = false; b.textContent = 'Thử lại'; b.title = r.error ?? '' ; b.previousElementSibling.textContent = r.error ?? 'Cài không thành công.' }
+})
+
+function renderRoutes() {
+  $('routes').innerHTML = S.routes.filter((r) => r.app === S.app || S.apps.length < 2).map((r) => `<option value="${esc(r.path)}">`).join('')
+}
+
+async function load() {
+  const st = await (await api('/api/state')).json()
+  Object.assign(S, st)
+  $('project').textContent = st.project
+  document.title = `${st.project} · Aura Studio`
+  const sel = $('app')
+  sel.hidden = st.apps.length < 2
+  sel.innerHTML = st.apps.map((a) => `<option value="${esc(a.dir)}"${a.dir === st.app ? ' selected' : ''}>${esc(a.name)}</option>`).join('')
+  try { const w = Number(localStorage.getItem('aura-studio-width')); if (w) { S.width = w; document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', Number(x.dataset.w) === w)) } } catch {}
+  $('pwbanner').hidden = st.playwright
+  renderRoutes(); renderPreview(); renderMessages(); syncSend()
+  if (st.running) $('messages').insertAdjacentHTML('beforeend', '<div class="meta">Agent đang chạy một yêu cầu từ tab khác…</div>')
+}
+load()
+</script>
+</body>
+</html>

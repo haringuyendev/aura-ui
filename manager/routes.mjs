@@ -85,6 +85,18 @@ function declaredRoutes(repo, all, index) {
   return out
 }
 
+/** Every route the project declares: [{ app, path, dynamic }] (for Studio's page picker). */
+export function allRoutes(ctx, index) {
+  const all = Object.keys(index), seen = new Map()
+  const add = (f, p) => {
+    const app = ctx.rel(ctx.ownerOf(path.join(ctx.repo, f)).dir) || '.'
+    seen.set(app + p, { app, path: p || '/', dynamic: /[:*]/.test(p) })
+  }
+  for (const [f, set] of Object.entries(declaredRoutes(ctx.repo, all, index))) for (const p of set) add(f, p)
+  for (const [f, p] of Object.entries(fileRoutes(ctx, all))) add(f, p)
+  return [...seen.values()].sort((a, b) => a.app.localeCompare(b.app) || a.path.localeCompare(b.path))
+}
+
 /**
  * Pages for the changed files: { pages: [{ path, app, via, dynamic }], unmapped: [file] } (app = the package folder that serves the page).
  * `files` are repo-relative; `index` is the cache's files map ({ imports }).

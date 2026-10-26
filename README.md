@@ -19,14 +19,16 @@ Thang 0–3, ship-quality ≥ 2,6. Chi tiết từng vòng trong `evals/results/
 ```
 .claude-plugin/              plugin.json, marketplace.json
 hooks/hooks.json             hook cho agent: SessionStart, PostToolUse (Write|Edit, Bash), Stop
-skills/                      8 skill, gọi bằng /aura-ui:<tên>
+skills/                      9 skill, gọi bằng /aura-ui:<tên>
   build/                     dựng/sửa màn hình theo luật thiết kế (tự kích hoạt khi làm UI)
   init/  scan/               cài aura vào repo · quét lại, trạng thái, baseline
   find/  check/  describe/   tìm component · kiểm tra & sửa lỗi · viết mô tả component
   inspect/                   aura verify trước khi xong việc; mở trang đã dựng, báo lỗi bố cục / màu / số liệu bằng chữ
+  studio/                    mở Aura Studio: trang chat + preview live kiểu Lovable
   new-app/                   tạo app từ starter (add-on editor/lightbox: aura find in sẵn lệnh cài khi cần)
 manager/                     Aura component manager: aura.mjs (init, find, snippet, add, scaffold, variant,
-                             show, usage, tokens, check, verify, inspect, describe, baseline, scan, status, hook)
+                             show, usage, tokens, check, verify, inspect, studio, describe, baseline, scan, status, hook);
+                             studio.mjs + studio.html (trang Aura Studio)
 template/                    starter: Vite + React 19 + TS + Tailwind v4 + shadcn (63 component, Base UI),
                              blocks/ (page-header, stat, data-table, form…), lib/format.ts, token
 catalog/components.json      danh mục 76 mục của starter (dùng làm từ điển Việt–Anh cho aura find)
@@ -107,6 +109,20 @@ flowchart LR
 ```
 Agent dựng từ linh kiện của dự án, hook chặn ngay khi lệch luật, và không được kết thúc khi `aura verify` chưa sạch.
 Sau 4 lần nhắc mà vẫn chưa đạt, agent được dừng nhưng user nhận thông báo những gì còn tồn đọng.
+
+## Aura Studio
+Trang kiểu Lovable chạy local cho dự án đã có `.aura/`:
+```bash
+node .aura/bin/aura.mjs studio          # http://localhost:4400 (--app apps/web, --port, --model, --no-open)
+```
+- Bên trái là khung chat. Mỗi tin nhắn chạy `claude -p` ngay trong repo, dùng đăng nhập Claude Code của máy, nên skill và hook của
+  aura (check, verify, chặn primitive tự dựng) áp dụng y như khi làm trong terminal. Câu trả lời hiện dần, các bước làm gom thành
+  danh sách thu gọn được, lời nhắc của hook Aura hiện thành ghi chú.
+- Bên phải là dev server của app với các khung Vừa khung/1440/768/390. Nếu dev server chưa chạy, Studio đề nghị bật giúp.
+  Trang tự cập nhật qua HMR và tải lại khi agent làm xong.
+- Agent muốn thêm primitive mới thì Studio hiện nút **Đồng ý / Không**, thay cho prompt quyền của terminal.
+- Dự án chưa có Playwright thì agent verify với `--skip-inspect`, còn Studio hiện nút cài Playwright cho user.
+- Chỉ nghe trên 127.0.0.1 và chặn request từ trang khác (kiểm tra Host và Origin).
 
 ## Aura component manager
 Aura quản lý component của chính dự án: registry `.aura/` luôn khớp với code nhờ hook của agent.

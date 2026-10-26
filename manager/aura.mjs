@@ -16,6 +16,9 @@
 //                                   that render them (found through imports and the router); the Stop hook requires it
 //   aura inspect <url> [/path…] [--widths 1440,768,390] [--shot] [--json]   open the pages headless and report
 //                                   layout, KPI emphasis, data color, repeated content and button problems as text
+//   aura studio [--app apps/web] [--port 4400] [--model m] [--no-open]
+//                                   a local Lovable-style page: chat with Claude Code on the left, the live dev server on
+//                                   the right (runs claude -p in this repo, so aura's skills and hooks apply)
 //   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
 //   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
 //   aura describe <name> --summary "…" [--use "a; b"] [--avoid "…"] [--keywords "vi, en"] [--example "…"]
@@ -36,13 +39,14 @@ import { formatReport, inspect, resolveUrls } from './inspect.mjs'
 import { SHADCN, addCommand, addsPrimitives, hasComponent, installNames } from './primitives.mjs'
 import { loadVerify, verifiedClean, verify } from './verify.mjs'
 import { SCAFFOLDS, addVariant, scaffold, snippet } from './scaffold.mjs'
+import { studio } from './studio.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const cmd = argv[0]
 const flag = (name) => { const i = argv.indexOf(`--${name}`); return i >= 0 ? argv[i + 1] : undefined }
 const has = (name) => argv.includes(`--${name}`)
-const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full', '--shot', '--dry-run', '--write', '--force'].includes(all[i - 1])))
+const positional = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && !(i > 0 && all[i - 1].startsWith('--') && !['--changed', '--json', '--scripts', '--existing', '--full', '--shot', '--dry-run', '--write', '--force', '--no-open'].includes(all[i - 1])))
 
 /** The nearest folder with .aura/ going up; else the monorepo root (package.json workspaces); else the nearest package.json. */
 function findRepoRoot(start) {
@@ -177,7 +181,7 @@ const VERSION = (() => {
 function vendorCli(ctx) {
   const bin = path.join(ctx.auraDir, 'bin')
   fs.mkdirSync(bin, { recursive: true })
-  for (const file of fs.readdirSync(here).filter((x) => x.endsWith('.mjs'))) fs.copyFileSync(path.join(here, file), path.join(bin, file))
+  for (const file of fs.readdirSync(here).filter((x) => /\.(mjs|html)$/.test(x))) fs.copyFileSync(path.join(here, file), path.join(bin, file))
   const catalog = path.join(here, '..', 'catalog', 'components.json')
   if (fs.existsSync(catalog)) fs.copyFileSync(catalog, path.join(bin, 'aura-catalog.json'))
   if (VERSION) fs.writeFileSync(path.join(bin, 'VERSION'), VERSION + '\n')
@@ -218,7 +222,7 @@ async function main() {
     const r = refresh(ctx, { full: true })
     const f = files(ctx)
     if (!fs.existsSync(f.rules)) fs.writeFileSync(f.rules, JSON.stringify({
-      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy), inspect ({ baseUrl (a URL, or { "apps/web": url } per app), widths, storageState, kpiRatio, minDataColor, repeatSections, maxKpis, tapTarget } for aura inspect/verify; its rules go in "rules" too), verify ({ mode: "required" (Stop hook needs aura verify) | "off", maxPages, maxStopBlocks })',
+      $comment: 'rules: error blocks the agent, warn reports, info hints, off disables. Optional: primitivesDir (folder of base components), tokenFiles (CSS entry files; @imports are followed), allowUiLibraries (import prefixes allowed besides the detected ones), cli ("local" makes hooks run .aura/bin instead of the plugin copy), studio ({ port, model, permissionMode } for aura studio), inspect ({ baseUrl (a URL, or { "apps/web": url } per app), widths, storageState, kpiRatio, minDataColor, repeatSections, maxKpis, tapTarget } for aura inspect/verify; its rules go in "rules" too), verify ({ mode: "required" (Stop hook needs aura verify) | "off", maxPages, maxStopBlocks })',
       rules: DEFAULT_RULES,
       allowUiLibraries: [],
     }, null, 2) + '\n')
@@ -229,7 +233,7 @@ async function main() {
       const raw = fs.readFileSync(pkgPath, 'utf8')
       const pkg = JSON.parse(raw)
       if (!pkg.scripts?.aura) {
-        pkg.scripts = { ...pkg.scripts, aura: 'node .aura/bin/aura.mjs', 'aura:check': 'node .aura/bin/aura.mjs check --changed' }
+        pkg.scripts = { ...pkg.scripts, aura: 'node .aura/bin/aura.mjs', 'aura:check': 'node .aura/bin/aura.mjs check --changed', 'aura:studio': 'node .aura/bin/aura.mjs studio' }
         fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, raw.match(/^(\s+)"/m)?.[1].length ?? 2) + '\n')
       }
     }
@@ -418,6 +422,10 @@ async function main() {
     })
     console.log(res.text)
     if (!res.ok) process.exitCode = 1
+  } else if (cmd === 'studio') {
+    await studio(ctx, { refresh: () => (refresh(ctx), { index: JSON.parse(fs.readFileSync(files(ctx).cache, 'utf8')).files }) }, {
+      port: flag('port'), app: flag('app'), model: flag('model'), permissionMode: flag('permission-mode'), open: !has('no-open'),
+    })
   } else if (cmd === 'baseline') {
     console.log(`Baseline updated: ${writeBaseline(ctx, r)} finding(s) accepted as existing.`)
   } else if (cmd === 'describe' && flag('from')) {
@@ -519,13 +527,23 @@ async function hook(event) {
 
   if (event === 'pre-tool') {
     // Adding a primitive changes the shared UI kit: the user decides (permission prompt).
+    // Under Aura Studio (headless, no prompt) the user approves from the page: deny with a marker Studio turns into
+    // Approve/Decline buttons, and allow what the user has approved there.
     const names = input.tool_name === 'Bash' ? addsPrimitives(input.tool_input?.command) : null
     const have = names && [...readRegistry(ctx).components, ...(readRegistry(ctx).library ?? [])]
     const fresh = names?.filter((n) => !hasComponent(have, n)) ?? []
-    if (fresh.length) return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: `Aura: the agent wants to add primitive(s) ${fresh.join(', ')} to ${uiRel ?? 'the UI kit'} (shared by every screen). Approve only if you want them in the project.` } })
-    if (input.tool_name === 'Write' && target && inDir(target, ctx.uiDir) && !fs.existsSync(target) && /\.(tsx|jsx|vue|svelte)$/.test(target))
-      return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: `Aura: the agent wants to create a new primitive ${ctx.rel(target)} in the shared UI kit. Approve, or deny and ask it to reuse an existing component (aura find) or add a standard one (aura add).` } })
-    return
+    const newFile = input.tool_name === 'Write' && target && inDir(target, ctx.uiDir) && !fs.existsSync(target) && /\.(tsx|jsx|vue|svelte)$/.test(target) ? ctx.rel(target) : null
+    const asking = fresh.length ? fresh : newFile ? [newFile] : []
+    if (!asking.length) return
+    const reason = fresh.length
+      ? `Aura: the agent wants to add primitive(s) ${fresh.join(', ')} to ${uiRel ?? 'the UI kit'} (shared by every screen). Approve only if you want them in the project.`
+      : `Aura: the agent wants to create a new primitive ${newFile} in the shared UI kit. Approve, or deny and ask it to reuse an existing component (aura find) or add a standard one (aura add).`
+    if (process.env.AURA_STUDIO) {
+      const approved = (() => { try { return JSON.parse(fs.readFileSync(path.join(ctx.auraDir, 'cache', 'studio-approved.json'), 'utf8')) } catch { return [] } })()
+      if (asking.every((n) => approved.includes(n))) return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', permissionDecisionReason: 'Aura: approved by the user in Studio.' } })
+      return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `${reason} The user is in Aura Studio, which shows them Approve/Decline buttons for this [aura-approve:${asking.join(',')}]. Stop here and say in one line what you want to add and why; run the same command again once they approve.` } })
+    }
+    return json({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'ask', permissionDecisionReason: reason } })
   }
 
   if (event === 'post-bash') {

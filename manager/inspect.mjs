@@ -46,7 +46,7 @@ export const INSPECT_DEFAULTS = {
 const LAYOUT = new Set(['h-overflow', 'overlap', 'clipped-text', 'uneven-row', 'blank-area', 'tap-target'])
 
 /** Playwright from the project (any workspace, Bun/pnpm stores), else null. */
-async function loadPlaywright(ctx) {
+export async function loadPlaywright(ctx) {
   const roots = [...new Set([ctx.repo, ...ctx.workspaces.map((w) => path.join(ctx.repo, w.dir)), process.cwd()])]
   const tryImport = async (file) => { try { const m = await import(pathToFileURL(file).href); return m.chromium ? m : m.default?.chromium ? m.default : null } catch { return null } }
   for (const name of ['playwright', '@playwright/test', 'playwright-core'])
