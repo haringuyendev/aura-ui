@@ -38,5 +38,12 @@ screen. They are saved in `.aura/cache/studio-uploads/` (git-ignored) and the me
 them: images as mockups or bug screenshots (rebuild with the project's components and tokens), CSV/JSON as sample data,
 PDF/text as requirements, Excel/Word through the xlsx/docx skills. 20MB per file, 10 per message.
 
+Address bar: the preview is an iframe on another port, so Studio learns the open page from the app itself. Apps from the
+aura starter report it in dev (`src/lib/studio-bridge.ts`, called in `main.tsx`). In an app made another way the
+bar stays where it was typed: copy that file and call `reportPathToStudio()` in the entry file.
+
+History: the clock button lists earlier conversations ("Cuộc trò chuyện mới" archives the current one); one can be
+read or picked up again, Claude session included.
+
 Debugging: `.aura/cache/studio.json` holds the transcript (a new conversation archives the old one in
 `.aura/cache/studio-history/`), `.aura/cache/studio-last.jsonl` the last turn's raw stream.

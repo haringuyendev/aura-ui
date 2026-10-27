@@ -259,8 +259,20 @@ export async function studio(initialCtx, opts = {}) {
     return (e) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`) }
   }
 
+  // ---- earlier conversations: .aura/cache/studio-history/<time>.json, newest first ----
+  const historyDir = () => path.join(ctx.auraDir, 'cache', 'studio-history')
+  const historyFile = (id) => path.join(historyDir(), `${id}.json`)
+  const historyIds = () => { try { return fs.readdirSync(historyDir()).filter((f) => /^[\w-]+\.json$/.test(f)).map((f) => f.slice(0, -5)).sort().reverse() } catch { return [] } }
+  /** Keep the current conversation (and its Claude session id, for claude --resume) instead of dropping it. */
+  const archive = () => {
+    if (!state.messages.length) return
+    fs.mkdirSync(historyDir(), { recursive: true })
+    fs.writeFileSync(historyFile(new Date().toISOString().replace(/[:.]/g, '-')), JSON.stringify({ sessionId: state.sessionId, messages: state.messages }, null, 1))
+  }
+
   // ---- HTTP ----
-  const html = path.join(here, 'studio.html')
+  // read once: a page newer than this server (the plugin updated while Studio runs) would call APIs it doesn't have
+  const page = fs.readFileSync(path.join(here, 'studio.html'))
   const port = Number(opts.port ?? ctx?.config.studio?.port ?? 4400)
   const origins = new Set([`http://localhost:${port}`, `http://127.0.0.1:${port}`])
   const body = (req) => new Promise((resolve) => { let s = ''; req.on('data', (d) => { s += d; if (s.length > 1e6) req.destroy() }); req.on('end', () => { try { resolve(JSON.parse(s || '{}')) } catch { resolve({}) } }) })
@@ -274,7 +286,7 @@ export async function studio(initialCtx, opts = {}) {
 
     if (req.method === 'GET' && url.pathname === '/') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' })
-      return res.end(fs.readFileSync(html))
+      return res.end(page)
     }
     if (req.method === 'GET' && url.pathname === '/api/state') {
       if (!ctx) return sendJson(res, 200, { missing: missing(), mode: 'new', base: opts.newDir ?? opts.base, empty: isEmptyDir(opts.newDir ?? opts.base), name: path.basename(opts.newDir ?? opts.base), creating: !!creating })
@@ -282,6 +294,32 @@ export async function studio(initialCtx, opts = {}) {
       try { routes = allRoutes(ctx, routeIndex()) } catch {}
       const withUrls = await Promise.all(appList.map(async (a) => ({ ...a, url: await devUrl(a.dir) })))
       return sendJson(res, 200, { project: ctx.pkg?.name ?? path.basename(ctx.repo), repo: ctx.repo, apps: withUrls, app: state.app, path: state.path, routes, messages: state.messages, running: !!run, permissionMode, playwright, missing: missing() })
+    }
+    // the current turn as the server has it: the page follows this when its chat stream dropped
+    if (req.method === 'GET' && url.pathname === '/api/messages') return sendJson(res, 200, { running: !!run, messages: ctx ? state.messages : [] })
+    if (req.method === 'GET' && url.pathname === '/api/history') {
+      if (!ctx) return sendJson(res, 200, { items: [] })
+      const items = historyIds().map((id) => {
+        const d = readJson(historyFile(id), {})
+        const asked = (d.messages ?? []).filter((m) => m.role === 'user')
+        return { id, at: d.messages?.[0]?.at ?? null, title: asked[0]?.text?.slice(0, 140) ?? '', count: asked.length }
+      })
+      return sendJson(res, 200, { items })
+    }
+    if (req.method === 'GET' && url.pathname === '/api/history/item') {
+      const id = url.searchParams.get('id') ?? ''
+      if (!ctx || !historyIds().includes(id)) return sendJson(res, 404, { error: 'not found' })
+      return sendJson(res, 200, { id, messages: readJson(historyFile(id), {}).messages ?? [] })
+    }
+    if (req.method === 'POST' && url.pathname === '/api/history/open') {
+      const b = await body(req)
+      if (!ctx || !historyIds().includes(b.id)) return sendJson(res, 404, { error: 'not found' })
+      if (run) return sendJson(res, 409, { error: 'busy' })
+      const d = readJson(historyFile(b.id), {})
+      archive()
+      fs.rmSync(historyFile(b.id))
+      Object.assign(state, { sessionId: d.sessionId ?? null, messages: d.messages ?? [] }); save()
+      return sendJson(res, 200, { ok: true })
     }
     if (req.method === 'POST' && url.pathname === '/api/create') {
       const b = await body(req)
@@ -354,12 +392,7 @@ export async function studio(initialCtx, opts = {}) {
     }
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       if (run) return sendJson(res, 409, { error: 'busy' })
-      // keep the old conversation (and its Claude session id, for claude --resume) instead of dropping it
-      if (state.messages.length) {
-        const dir = path.join(ctx.auraDir, 'cache', 'studio-history')
-        fs.mkdirSync(dir, { recursive: true })
-        fs.writeFileSync(path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ sessionId: state.sessionId, messages: state.messages }, null, 1))
-      }
+      archive()
       Object.assign(state, { sessionId: null, messages: [] }); save()
       return sendJson(res, 200, { ok: true })
     }

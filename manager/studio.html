@@ -80,6 +80,13 @@ svg { flex: none; }
 
 .banner { display: flex; align-items: center; gap: 10px; padding: 8px 16px; background: var(--warn-soft); color: var(--warn); font-size: 12.5px; border-bottom: 1px solid var(--line); }
 .banner[hidden] { display: none; }
+.messages[hidden], .composer[hidden], .history[hidden] { display: none; }
+.history { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.hist-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.hist-item { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--fg); font: inherit; cursor: pointer; }
+.hist-item:hover { background: var(--soft); }
+.hist-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.hist-body { display: flex; flex-direction: column; gap: 18px; margin-top: 8px; }
 .banner.missing { flex-direction: column; align-items: stretch; gap: 6px; color: var(--danger); background: var(--danger-soft); }
 .create-card .banner.missing { border: 0; border-radius: 10px; padding: 10px 14px; }
 .banner.missing code { color: var(--fg); background: var(--panel); padding: 1px 6px; border-radius: 5px; user-select: all; }
@@ -199,10 +206,12 @@ iframe { display: block; border: 0; width: 100%; height: 100%; background: #fff;
       <div class="brand"><span class="brand-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 6.4L21 12l-6.4 2.6L12 21l-2.6-6.4L3 12l6.4-2.6z"/></svg></span>Aura Studio</div>
       <span class="project" id="project"></span>
       <span class="spacer"></span>
-      <button class="icon-btn" id="reset" title="Cuộc trò chuyện mới" aria-label="Cuộc trò chuyện mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+      <button class="icon-btn" id="history" type="button" title="Cuộc trò chuyện trước" aria-label="Cuộc trò chuyện trước" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></button>
+      <button class="icon-btn" id="reset" title="Cuộc trò chuyện mới (cuộc đang có được lưu vào lịch sử)" aria-label="Cuộc trò chuyện mới"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     </header>
     <div class="banner missing" id="missing" hidden></div>
     <div class="banner" id="pwbanner" hidden><span>Chưa có Playwright nên <code>aura verify</code> chưa mở được trang để kiểm tra.</span><button class="btn btn-sm" id="pwinstall" type="button">Cài Playwright</button></div>
+    <div class="history" id="historypanel" hidden></div>
     <div class="messages" id="messages" aria-live="polite"></div>
     <form class="composer" id="composer">
       <div class="box">
@@ -326,16 +335,21 @@ function renderMessages() {
     box.querySelectorAll('.idea').forEach((b) => b.onclick = () => { $('input').value = b.textContent; syncSend(); $('input').focus() })
     return
   }
-  S.messages.forEach((m, i) => {
+  renderThread(box, S.messages, S.running)
+  if (atBottom || S.running) box.scrollTop = box.scrollHeight
+}
+
+/** A conversation into box: user messages with their attachments, replies with their steps. */
+function renderThread(box, messages, live) {
+  messages.forEach((m, i) => {
     if (m.role === 'user') {
       if (m.files?.length) box.insertAdjacentHTML('beforeend', `<div class="msg-files">${m.files.map((f) => /^image\//.test(f.type)
         ? `<a href="/api/file?id=${encodeURIComponent(f.id)}" target="_blank" rel="noopener"><img src="/api/file?id=${encodeURIComponent(f.id)}" alt="${esc(f.name)}"></a>`
         : `<a href="/api/file?id=${encodeURIComponent(f.id)}" target="_blank" rel="noopener" class="att">${fileIcon(f.name)}<span>${esc(f.name)}</span></a>`).join('')}</div>`)
       box.insertAdjacentHTML('beforeend', `<div class="msg-user">${esc(m.text)}</div>`)
     }
-    else box.appendChild(renderReply(m, S.running && i === S.messages.length - 1))
+    else box.appendChild(renderReply(m, live && i === messages.length - 1))
   })
-  if (atBottom || S.running) box.scrollTop = box.scrollHeight
 }
 
 /* ---- attachments ---- */
@@ -398,26 +412,68 @@ async function send(text, files = chatFiles.take()) {
   S.messages.push({ role: 'user', text, files }, reply)
   $('input').value = ''; autosize(); syncSend(); renderMessages()
   const width = S.width || Math.round($('stage').clientWidth)
+  let reader = null, gotDone = false, lastByte = Date.now(), behind = 0
+  // The server pings every 15s. Silence for 40s, or the server ahead of the page on three checks in a row, means the
+  // stream is stuck: drop it and follow the turn from the server instead.
+  const watch = setInterval(async () => {
+    try {
+      const st = await (await api('/api/messages')).json()
+      const ahead = st.messages?.length === S.messages.length && (st.messages.at(-1)?.parts?.length ?? 0) > reply.parts.length
+      behind = ahead ? behind + 1 : 0
+    } catch {}
+    if (reader && (Date.now() - lastByte > 40000 || behind >= 3)) reader.cancel().catch(() => {})
+  }, 5000)
   try {
     const res = await api('/api/chat', { text, app: S.app, path: S.path, width, files: files.map((f) => ({ id: f.id, name: f.name })) })
     if (!res.ok) throw new Error(res.status === 409 ? 'Agent đang chạy một yêu cầu khác.' : `Lỗi ${res.status}`)
-    const reader = res.body.getReader(), dec = new TextDecoder()
+    reader = res.body.getReader()
+    const dec = new TextDecoder()
     let buf = ''
     for (;;) {
       const { value, done } = await reader.read()
       if (done) break
+      lastByte = Date.now()
       buf += dec.decode(value, { stream: true })
       let i
       while ((i = buf.indexOf('\n\n')) >= 0) {
         const chunk = buf.slice(0, i); buf = buf.slice(i + 2)
-        if (chunk.startsWith('data: ')) onEvent(reply, JSON.parse(chunk.slice(6)))
+        if (!chunk.startsWith('data: ')) continue
+        let e
+        try { e = JSON.parse(chunk.slice(6)) } catch { continue }
+        if (e.t === 'done') gotDone = true
+        try { onEvent(reply, e) } catch (err) { console.error(err) } // one bad event must not stop the stream
       }
     }
   } catch (e) {
-    reply.parts.push({ kind: 'text', text: `⚠️ ${e.message}` })
+    if (!reader) reply.parts.push({ kind: 'text', text: `⚠️ ${e.message}` })
   }
+  clearInterval(watch)
+  if (reader && !gotDone) return follow()
   S.running = false
   syncSend(); renderMessages()
+}
+
+/**
+ * Follow a turn from the server's copy until it ends: after the chat stream dropped (laptop asleep, flaky network),
+ * or when the page was opened or reloaded while the agent was running.
+ */
+let following = false
+async function follow() {
+  if (following) return
+  following = true; S.running = true; syncSend(); renderMessages()
+  try {
+    for (;;) {
+      await new Promise((r) => setTimeout(r, 1500))
+      let st
+      try { st = await (await api('/api/messages')).json() } catch { continue }
+      S.messages = st.messages ?? S.messages
+      if (!st.running) break
+      renderMessages()
+    }
+  } finally {
+    following = false; S.running = false
+    syncSend(); renderMessages(); reloadFrame()
+  }
 }
 
 let edited = false
@@ -459,10 +515,24 @@ function renderPreview() {
   stage.innerHTML = `<div class="frame-wrap" id="wrap"><iframe id="frame" title="Xem trước" src="${esc(S.url + S.path)}"></iframe></div>`
   layoutFrame()
   $('frame').addEventListener('load', () => {
-    // Same-origin pages (rare) tell us their path; otherwise the address bar keeps what was typed.
-    try { const p = $('frame').contentWindow.location.pathname; if (p && p !== S.path) { S.path = p; $('path').value = p; saveView() } } catch {}
+    // Same-origin pages (rare) tell us their path; cross-origin ones report it with postMessage (below).
+    try { followPath($('frame').contentWindow.location.pathname) } catch {}
   })
 }
+/** The page in the preview moved (a click, the router, back/forward): show it in the address bar without reloading. */
+function followPath(p) {
+  if (typeof p !== 'string' || !p.startsWith('/') || p === S.path) return
+  S.path = p; $('path').value = p
+  $('newtab').href = S.url ? S.url + p : '#'
+  $('where').textContent = `Đang xem ${p}${S.width ? ` · ${S.width}px` : ''}`
+  saveView()
+}
+// Apps from the aura starter report their path from the iframe (src/lib/studio-bridge.ts).
+addEventListener('message', (e) => {
+  if (!S.url || e.data?.type !== 'aura-studio:path') return
+  try { if (e.origin !== new URL(S.url).origin) return } catch { return }
+  followPath(e.data.path)
+})
 function layoutFrame() {
   const wrap = $('wrap'), stage = $('stage')
   if (!wrap) return
@@ -487,7 +557,42 @@ function autosize() { const t = $('input'); t.style.height = 'auto'; t.style.hei
 $('input').addEventListener('input', () => { autosize(); syncSend() })
 $('input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!S.running) send($('input').value) } })
 $('composer').addEventListener('submit', (e) => { e.preventDefault(); S.running ? api('/api/stop', {}) : send($('input').value) })
-$('reset').addEventListener('click', async () => { if (S.running || !S.messages.length) return; await api('/api/reset', {}); S.messages = []; renderMessages() })
+$('reset').addEventListener('click', async () => { if (S.running || !S.messages.length) return; await api('/api/reset', {}); S.messages = []; showHistory(false); renderMessages() })
+$('history').addEventListener('click', () => showHistory(!H.open))
+
+/* ---- earlier conversations ("Cuộc trò chuyện mới" keeps the old one): read, or pick one up again ---- */
+const H = { open: false }
+function showHistory(open) {
+  H.open = open
+  $('historypanel').hidden = !open; $('messages').hidden = open; $('composer').hidden = open
+  $('history').setAttribute('aria-pressed', open)
+  if (open) renderHistory()
+}
+async function renderHistory() {
+  const box = $('historypanel')
+  let items = null
+  try { const r = await api('/api/history'); if (r.ok) items = (await r.json()).items ?? [] } catch {}
+  if (!items) { box.innerHTML = '<div class="hist-head"><b>Cuộc trò chuyện trước</b></div><p class="meta">Không tải được lịch sử. Nếu vừa cập nhật plugin, tắt Studio (Ctrl+C) rồi mở lại.</p>'; return }
+  const when = (at) => at ? new Date(at).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' }) : ''
+  box.innerHTML = '<div class="hist-head"><b>Cuộc trò chuyện trước</b></div>' + (items.length
+    ? items.map((h) => `<button type="button" class="hist-item" data-id="${esc(h.id)}"><span class="hist-title">${esc(h.title || '(không có nội dung)')}</span><span class="meta">${esc(when(h.at))} · ${h.count} yêu cầu</span></button>`).join('')
+    : '<p class="meta">Chưa có cuộc nào. Khi anh bấm "Cuộc trò chuyện mới", cuộc đang có được lưu ở đây.</p>')
+  box.querySelectorAll('.hist-item').forEach((b) => b.onclick = () => viewHistory(b.dataset.id))
+}
+async function viewHistory(id) {
+  const box = $('historypanel')
+  const res = await api(`/api/history/item?id=${encodeURIComponent(id)}`)
+  if (!res.ok) return renderHistory()
+  const { messages } = await res.json()
+  box.innerHTML = `<div class="hist-head"><button type="button" class="btn btn-sm" id="hback">← Danh sách</button><span class="spacer"></span><button type="button" class="btn btn-primary btn-sm" id="hopen" title="Cuộc đang có được lưu vào lịch sử"${S.running ? ' disabled' : ''}>Tiếp tục cuộc này</button></div><div class="hist-body"></div>`
+  renderThread(box.querySelector('.hist-body'), messages, false)
+  box.scrollTop = 0
+  $('hback').onclick = renderHistory
+  $('hopen').onclick = async () => {
+    if ((await api('/api/history/open', { id })).ok) S.messages = (await (await api('/api/messages')).json()).messages
+    showHistory(false); renderMessages()
+  }
+}
 $('reload').addEventListener('click', reloadFrame)
 $('path').addEventListener('change', () => { let p = $('path').value.trim() || '/'; if (!p.startsWith('/')) p = '/' + p; S.path = p; saveView(); renderPreview() })
 $('app').addEventListener('change', () => { S.app = $('app').value; S.path = '/'; saveView(); renderRoutes(); renderPreview() })
@@ -590,7 +695,7 @@ async function load() {
   try { const w = Number(localStorage.getItem('aura-studio-width')); if (w) { S.width = w; document.querySelectorAll('.seg button').forEach((x) => x.setAttribute('aria-pressed', Number(x.dataset.w) === w)) } } catch {}
   $('pwbanner').hidden = st.playwright
   renderRoutes(); renderPreview(); renderMessages(); syncSend()
-  if (st.running) $('messages').insertAdjacentHTML('beforeend', '<div class="meta">Agent đang chạy một yêu cầu từ tab khác…</div>')
+  if (st.running) follow()
 }
 load()
 </script>
