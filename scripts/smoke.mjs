@@ -86,6 +86,20 @@ await step('aura scaffold writes a dashboard that passes check', async () => {
   assert(c.status === 0, c.stdout + c.stderr)
 })
 
+await step('form scaffold picks dates on a calendar; a typed date is blocked', async () => {
+  const r = cli(['scaffold', 'form', 'src/pages/SmokeForm.tsx', '--name', 'Lịch hẹn'])
+  assert(r.status === 0, r.stdout + r.stderr)
+  const page = fs.readFileSync(path.join(app, 'src', 'pages', 'SmokeForm.tsx'), 'utf8')
+  assert(/<DateField\b/.test(page) && !/type="date"/.test(page), 'the form scaffold should use DateField')
+  const c = cli(['check', 'src/pages/SmokeForm.tsx'])
+  assert(c.status === 0, c.stdout + c.stderr)
+  const file = path.join(app, 'src', 'pages', 'TypedDate.tsx')
+  fs.writeFileSync(file, 'import { Input } from "@/components/ui/input"\n\nexport default function TypedDate() {\n  return <Input placeholder="dd/mm/yyyy" />\n}\n')
+  const h = hook('post-edit', { hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: { file_path: file } })
+  fs.rmSync(file)
+  assert(h.status === 2 && /date-without-picker/.test(h.stderr), `exit ${h.status}\n${h.stdout}\n${h.stderr}`)
+})
+
 await step('post-edit hook blocks a raw <button>', async () => {
   const file = path.join(app, 'src', 'pages', 'Raw.tsx')
   fs.writeFileSync(file, 'export default function Raw() {\n  return <button onClick={() => {}}>Lưu</button>\n}\n')

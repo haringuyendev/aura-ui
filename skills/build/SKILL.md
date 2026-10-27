@@ -93,6 +93,10 @@ The project's design system wins over the starter:
    are the only free-form markup. A box with rounded corners plus border/shadow/tint and padding is a
    Card or Item, a tinted or left-accented row is an Alert or Item variant, a small rounded label is a Badge:
    the `hand-built-surface` hook rule blocks these when they are styled `div`/`li`/`span`s.
+9. **Dates are picked on a calendar.** Every single date in a form or a filter bar is `DateField` (calendar + typing
+   DD/MM/YYYY, value is a `Date`); a period is `DateRangePicker`. Never a plain `Input`, `type="date"` or a box with a
+   DD/MM/YYYY placeholder (the `date-without-picker` hook rule blocks them); `picker={false}` only when the user asks
+   for typing alone.
 
 ## First build of a new app
 Before writing code, post a short brief in chat (5–10 lines, no more):

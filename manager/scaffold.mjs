@@ -22,7 +22,9 @@ export const SCAFFOLDS = ['dashboard', 'list', 'detail', 'form']
  * Returns { code, missing: [primitive names the skeleton would have used], notes }.
  */
 export function scaffold(ctx, { comps, tokens }, kind, abs, name) {
-  const find = (n) => comps.find((c) => c.name.toLowerCase() === n && c.category !== 'section')
+  // blocks the scaffolds use besides primitives (other blocks are page sections, not controls)
+  const BLOCKS = new Set(['date-field'])
+  const find = (n) => comps.find((c) => c.name.toLowerCase() === n && (c.category !== 'section' || BLOCKS.has(n)))
   const used = new Map() // import spec → Set(names)
   const missing = new Set()
   const use = (prim, ...names) => {
@@ -270,13 +272,17 @@ ${hasAlert ? `
       ? `<Field>\n              <FieldLabel htmlFor="${id}">${label}</FieldLabel>\n              ${control}${desc ? `\n              <FieldDescription>${desc}</FieldDescription>` : ''}\n            </Field>`
       : `<div className="flex flex-col gap-2">\n              ${hasLabel ? `<Label htmlFor="${id}">${label}</Label>` : `<label htmlFor="${id}" className="text-sm font-medium">${label}</label>`}\n              ${control}${desc ? `\n              <p className="text-muted-foreground text-xs">${desc}</p>` : ''}\n            </div>`
     const input = (id, extra = '') => hasInput ? `<Input id="${id}" name="${id}"${extra} />` : `{/* TODO: Input */}`
+    // dates are picked on a calendar (typing stays possible): the starter's DateField, else the browser's date input
+    const hasDateField = use('date-field', 'DateField')
+    if (hasDateField) imports = `import { useState } from "react"\n`
+    const dateControl = hasDateField ? '<DateField id="date" required value={date} onChange={setDate} />' : input('date', ' type="date" required')
     body = `      ${header('Tạo mới', 'TODO: biểu mẫu này dùng để làm gì', '')}
 
       ${card('Thông tin', 'Các trường có dấu * là bắt buộc.', `          <form className="flex max-w-2xl flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
             ${field('name', 'Họ và tên *', input('name', ' required autoComplete="name"'))}
             <div className="grid gap-5 sm:grid-cols-2">
               ${field('phone', 'Số điện thoại', input('phone', ' type="tel" inputMode="tel"'), 'Dùng để gửi thông báo kết quả.')}
-              ${field('date', 'Ngày hẹn *', input('date', ' type="date" required'))}
+              ${field('date', 'Ngày hẹn *', dateControl)}
             </div>
             ${field('note', 'Ghi chú', hasTextarea ? '<Textarea id="note" name="note" rows={4} />' : input('note'))}
             <div className="flex flex-wrap justify-end gap-2">
@@ -286,7 +292,9 @@ ${hasAlert ? `
           </form>`)}`
   } else throw new Error(`unknown scaffold "${kind}" (${SCAFFOLDS.join(', ')})`)
 
-  const state = kind === 'list' ? `  const [query, setQuery] = useState("")
+  const state = kind === 'form' && imports.includes('useState') ? `  const [date, setDate] = useState<Date>()
+
+` : kind === 'list' ? `  const [query, setQuery] = useState("")
   const [status, setStatus] = useState<Status | "all">("all")
   const filtered = useMemo(
     () => ROWS.filter((r) => (status === "all" || r.status === status) && \`\${r.id} \${r.name}\`.toLowerCase().includes(query.toLowerCase())),

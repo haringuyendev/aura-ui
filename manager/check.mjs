@@ -10,6 +10,7 @@ export const DEFAULT_RULES = {
   'duplicate-component': 'error',
   'bypasses-primitive': 'error',
   'hand-built-surface': 'error',
+  'date-without-picker': 'error',
   'raw-color': 'warn',
   'status-text-unsafe': 'warn',
   'img-alt': 'warn',
@@ -182,6 +183,22 @@ export function checkFile(ctx, state, abs, { isNew = false } = {}) {
       const hits = [...src.matchAll(new RegExp(`<${tag}\\b([^>]*)>`, 'g'))].filter((x) => !(tag === 'input' && /type=["'](hidden|file|checkbox|radio)["']/.test(x[1])))
       // one finding per occurrence, so the baseline can tell a new raw element from an old one
       for (const m of hits) add('bypasses-primitive', lineOf(src, m.index), `raw <${tag}> while the project has "${prim.name}" (${prim.category === 'library' ? prim.import : prim.path}, used in ${prim.usedBy} files). Use ${prim.exports[0]} from "${importFrom(prim)}"${variantsOf(prim)}.`)
+    }
+
+    // date-without-picker: a date the user has to type (native <input type="date">, a text box with a DD/MM/YYYY
+    // placeholder) while the project has a date field with a calendar. picker={false} is an explicit choice: not flagged.
+    const blocks = new Map(state.registry.components.map((c) => [c.name.toLowerCase(), c]))
+    const dateField = blocks.get('date-field'), rangeField = blocks.get('date-range-field') ?? blocks.get('date-range-picker'), datePicker = prims.get('date-picker')
+    if ((dateField || datePicker) && !/(^|\/)date-[\w-]+\.tsx$/.test(relPath)) {
+      const use = dateField
+        ? `${dateField.exports.includes('DateField') ? 'DateField' : dateField.exports[0]} from "${importFrom(dateField)}" (calendar + typing)${rangeField ? `, or ${rangeField.exports[0]} from "${importFrom(rangeField)}" for a period` : ''}`
+        : `${datePicker.exports.slice(0, 3).join(' / ')} from "${importFrom(datePicker)}"`
+      for (const m of code.matchAll(/<(Input|input|InputGroupInput|TextField|MaskedField)\b([^>]*)>/g)) {
+        const attrs = m[2]
+        const native = /\btype=\{?["'](date|datetime-local)["']/.test(attrs)
+        const typed = /placeholder=\{?["'`][^"'`]*\b(dd\s*\/\s*mm|DD\s*\/\s*MM|ngày\s*\/\s*tháng)/i.test(attrs)
+        if (native || typed) add('date-without-picker', lineOf(src, m.index), `${native ? `<${m[1]} type="date">` : `<${m[1]}> with a DD/MM/YYYY placeholder`}: users must be able to pick a date from a calendar. Use ${use}.`)
+      }
     }
 
     // hand-built-surface: a div/li/span styled into what Card, Item, Alert, Badge, Separator or Skeleton already is

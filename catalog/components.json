@@ -1068,7 +1068,7 @@
       "date range filters",
       "booking"
     ],
-    "avoid_when": "Free typing of known dates; offer an input too.",
+    "avoid_when": "A date field in a form: date-field (calendar + typing); a period: date-range-picker.",
     "keywords": [
       "date picker",
       "date range",
@@ -1175,6 +1175,44 @@
     "kind": "primitive"
   },
   {
+    "name": "date-field",
+    "category": "form",
+    "kind": "block",
+    "summary": "One date: picked on a Vietnamese calendar (month/year dropdowns) or typed as DD/MM/YYYY with an auto-filling mask; value is a Date. The default for every single date.",
+    "use_when": [
+      "any date in a form: ngày sinh, ngày hẹn, ngày khám, hạn chót",
+      "a filter by one day"
+    ],
+    "avoid_when": "A period: date-range-picker. Typing only (picker={false}) just when the user asks for it.",
+    "keywords": [
+      "date",
+      "date picker",
+      "date input",
+      "ngày",
+      "ô ngày",
+      "chọn ngày",
+      "nhập ngày",
+      "ngày sinh",
+      "ngày hẹn",
+      "ngày khám",
+      "hạn chót",
+      "lịch",
+      "dd/mm/yyyy"
+    ],
+    "example": "<DateField value={date} onChange={setDate} aria-label=\"Ngày hẹn\" />  // const [date, setDate] = useState<Date>()",
+    "related": [
+      "date-range-picker",
+      "calendar",
+      "field"
+    ],
+    "import": "@/components/blocks/date-field",
+    "exports": [
+      "DateField"
+    ],
+    "variants": {},
+    "deps": []
+  },
+  {
     "name": "date-range-picker",
     "category": "form",
     "kind": "block",
@@ -1183,7 +1221,7 @@
       "dashboard and report periods",
       "filtering lists by date"
     ],
-    "avoid_when": "Picking a single date in a form; use calendar in a popover.",
+    "avoid_when": "Picking a single date in a form: date-field.",
     "keywords": [
       "date range",
       "period",
@@ -1193,7 +1231,10 @@
       "khoảng ngày",
       "chọn kỳ",
       "từ ngày đến ngày",
-      "hôm nay"
+      "hôm nay",
+      "lọc theo ngày",
+      "lọc ngày",
+      "chọn khoảng ngày"
     ],
     "example": "<DateRangePicker value={range} onChange={setRange} />",
     "related": [

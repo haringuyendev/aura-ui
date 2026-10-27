@@ -78,7 +78,18 @@ function DateRangePicker({ value, onChange, presets = defaultPresets, className 
             mode="range"
             locale={vi}
             selected={value}
-            onSelect={onChange}
+            onSelect={(_, picked) => {
+              // first click: the start (or a new start after a full range); second click: the end, then close.
+              // react-day-picker would fill both ends on the first click.
+              const range: DateRange =
+                !value?.from || value.to
+                  ? { from: picked, to: undefined }
+                  : picked < value.from
+                    ? { from: picked, to: value.from }
+                    : { from: value.from, to: picked }
+              onChange(range)
+              if (range.to) setOpen(false)
+            }}
             numberOfMonths={1}
             defaultMonth={value?.from}
             disabled={{ after: new Date() }}
