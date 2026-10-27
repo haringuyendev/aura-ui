@@ -3,7 +3,7 @@
   "description": "Component UI manager for coding agents: keeps a registry of the project's own components, tokens and conventions in .aura/, answers 'what should I use' (aura find/show/tokens), and checks every component edit through agent hooks (duplicates, raw primitives, undefined tokens, foreign UI libraries). Also builds new apps Lovable-style from a shadcn starter.",
   "version": "1.10.0",
   "author": {
-    "name": "MedViet AI"
+    "name": "haringuyendev"
   },
   "license": "MIT",
   "keywords": [
