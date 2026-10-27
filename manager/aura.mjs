@@ -22,6 +22,8 @@
 //                                   without a project (or with --new) it opens on "new app": describe it, Studio creates it
 //                                   from the starter and the first message builds it
 //   aura new <folder> [--name x]    a new app from the aura starter (copy, install, aura init, git init)
+//   aura export [--out file.zip|dir]   the source as one .zip (no node_modules, build output, caches, .env secrets);
+//                                   default ~/Downloads/<project>-<date>.zip
 //   aura setup [--json]             what this machine has for aura-ui (Node, npm, git, claude CLI, Playwright) and how to install the rest
 //   aura doctor                     what Aura couldn't detect in this repo, and the rules.json key that fixes it
 //   aura stats [--changed] [--json] findings per rule, new vs existing, and the files with the most
@@ -47,6 +49,7 @@ import { studio } from './studio.mjs'
 import { createApp } from './newapp.mjs'
 import { runSync } from './proc.mjs'
 import { checkSetup, formatSetup } from './setup.mjs'
+import { defaultExportDir, exportProject, formatSize } from './export.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
@@ -263,6 +266,20 @@ async function main() {
     if (!positional[0]) return console.error('usage: aura new <folder> [--name app-name]')
     try { await createApp({ target: path.resolve(positional[0]), name: flag('name') ?? path.basename(path.resolve(positional[0])) }) } catch (e) { console.error(`aura new: ${e.message}`); process.exit(1) }
     return console.log(`Ready: cd ${positional[0]} && npm run dev   (or: node .aura/bin/aura.mjs studio)`)
+  }
+  if (cmd === 'export') {
+    let out
+    try {
+      const r = exportProject(ctx.repo, { dataDir: ctx.auraDir })
+      const target = flag('out') ? path.resolve(flag('out')) : defaultExportDir(ctx.repo)
+      out = /\.zip$/i.test(target) ? target : path.join(target, r.filename)
+      fs.mkdirSync(path.dirname(out), { recursive: true })
+      fs.writeFileSync(out, r.buffer)
+      console.log(`Exported ${r.files.length} files (${formatSize(r.bytes)}, zip ${formatSize(r.buffer.length)}) → ${out}`)
+      if (r.skipped.length) console.log(`Left out (secrets, share them another way): ${r.skipped.join(', ')}`)
+      console.log('Not included: node_modules, build output, caches. After unzipping: npm install && npm run dev')
+    } catch (e) { console.error(`aura export: ${e.message}`); process.exit(1) }
+    return
   }
   if (cmd === 'setup') {
     const items = checkSetup(isInitialised(ctx) ? ctx : null)

@@ -19,9 +19,11 @@ Thang 0–3, ship-quality ≥ 2,6. Chi tiết từng vòng trong `evals/results/
 ```
 .claude-plugin/              plugin.json, marketplace.json
 hooks/hooks.json             hook cho agent: SessionStart, PostToolUse (Write|Edit, Bash), Stop
-skills/                      10 skill, gọi bằng /aura-ui:<tên>
+skills/                      11 skill, gọi bằng /aura-ui:<tên>
   build/                     dựng/sửa màn hình theo luật thiết kế (tự kích hoạt khi làm UI)
   setup/                     kiểm tra máy (Node, npm, git, Claude CLI, Playwright), đề xuất cách cài
+  export/                    đóng gói source thành .zip (không có node_modules, build, .env), như export của Lovable;
+                             Studio có nút Tải code
   init/  scan/               cài aura vào repo · quét lại, trạng thái, baseline
   find/  check/  describe/   tìm component · kiểm tra & sửa lỗi · viết mô tả component
   inspect/                   aura verify trước khi xong việc; mở trang đã dựng, báo lỗi bố cục / màu / số liệu bằng chữ

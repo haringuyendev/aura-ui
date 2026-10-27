@@ -61,6 +61,24 @@ await step('aura check passes on the starter', async () => {
   assert(r.status === 0, r.stdout + r.stderr)
 })
 
+await step('aura export zips the source without node_modules, caches or .env', async () => {
+  fs.writeFileSync(path.join(app, '.env'), 'SECRET=1\n')
+  const out = path.join(work, 'export.zip')
+  const r = cli(['export', '--out', out])
+  fs.rmSync(path.join(app, '.env'))
+  assert(r.status === 0 && fs.existsSync(out), r.stdout + r.stderr)
+  // entry names from the zip's central directory (no unzip on every CI runner)
+  const z = fs.readFileSync(out), end = z.length - 22, names = []
+  for (let i = 0, at = z.readUInt32LE(end + 16); i < z.readUInt16LE(end + 10); i++) {
+    const n = z.readUInt16LE(at + 28), extra = z.readUInt16LE(at + 30), note = z.readUInt16LE(at + 32)
+    names.push(z.toString('utf8', at + 46, at + 46 + n)); at += 46 + n + extra + note
+  }
+  assert(names.includes('smoke-app/package.json') && names.includes('smoke-app/src/main.tsx'), `missing source: ${names.slice(0, 5).join(', ')}`)
+  const bad = names.filter((n) => /\/(node_modules|dist|\.git)\/|\/cache\/|\/\.env$/.test(n))
+  assert(!bad.length, `should not be in the zip: ${bad.slice(0, 5).join(', ')}`)
+  assert(/Left out .*\.env/.test(r.stdout), 'the left-out .env is not reported')
+})
+
 await step('aura scaffold writes a dashboard that passes check', async () => {
   const r = cli(['scaffold', 'dashboard', 'src/pages/Smoke.tsx', '--name', 'Đơn hàng'])
   assert(r.status === 0, r.stdout + r.stderr)

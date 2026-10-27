@@ -16,6 +16,7 @@ import { files, refresh } from './registry.mjs'
 import { packageManager } from './primitives.mjs'
 import { allRoutes } from './routes.mjs'
 import { devServer } from './verify.mjs'
+import { exportProject } from './export.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const readJson = (p, fallback) => { try { return JSON.parse(fs.readFileSync(p, 'utf8')) } catch { return fallback } }
@@ -294,6 +295,21 @@ export async function studio(initialCtx, opts = {}) {
       try { routes = allRoutes(ctx, routeIndex()) } catch {}
       const withUrls = await Promise.all(appList.map(async (a) => ({ ...a, url: await devUrl(a.dir) })))
       return sendJson(res, 200, { project: ctx.pkg?.name ?? path.basename(ctx.repo), repo: ctx.repo, apps: withUrls, app: state.app, path: state.path, routes, messages: state.messages, running: !!run, permissionMode, playwright, missing: missing() })
+    }
+    // the source as a .zip (the Export button): no node_modules, build output, caches or secrets
+    if (req.method === 'GET' && url.pathname === '/api/export') {
+      if (!ctx) return sendJson(res, 404, { error: 'Chưa có dự án để xuất' })
+      let r
+      try { r = exportProject(ctx.repo, { dataDir: ctx.auraDir }) } catch (e) { return sendJson(res, 500, { error: e.message }) }
+      res.writeHead(200, {
+        'content-type': 'application/zip',
+        'content-length': r.buffer.length,
+        'content-disposition': `attachment; filename="${r.filename}"; filename*=UTF-8''${encodeURIComponent(r.filename)}`,
+        'x-export-files': String(r.files.length),
+        'x-export-skipped': encodeURIComponent(r.skipped.join(', ')),
+        'cache-control': 'no-store',
+      })
+      return res.end(r.buffer)
     }
     // the current turn as the server has it: the page follows this when its chat stream dropped
     if (req.method === 'GET' && url.pathname === '/api/messages') return sendJson(res, 200, { running: !!run, messages: ctx ? state.messages : [] })

@@ -42,6 +42,9 @@ Address bar: the preview is an iframe on another port, so Studio learns the open
 aura starter report it in dev (`src/lib/studio-bridge.ts`, called in `main.tsx`). In an app made another way the
 bar stays where it was typed: copy that file and call `reportPathToStudio()` in the entry file.
 
+Export: **Tải code** above the preview downloads the source as a .zip (no node_modules, build output, caches or
+`.env` secrets), the same as the `aura-ui:export` skill.
+
 History: the clock button lists earlier conversations ("Cuộc trò chuyện mới" archives the current one); one can be
 read or picked up again, Claude session included.
 
